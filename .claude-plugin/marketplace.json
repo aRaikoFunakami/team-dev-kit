@@ -1,0 +1,14 @@
+{
+  "name": "team-dev-kit",
+  "owner": {
+    "name": "aRaikoFunakami"
+  },
+  "plugins": [
+    {
+      "name": "team-dev-kit",
+      "source": "./plugins/team-dev-kit",
+      "description": "チーム開発の契約(AGENTS.md)・手続き(skill)・秘密情報ガードレールを配る kit。skill は Claude が、git pre-commit は人間の commit を機械的に守る。",
+      "version": "0.1.0"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+#!/bin/sh
+# 概要: コミット前フック(L1)。ステージ済み差分を gitleaks で走査し、秘密情報・個人情報を検出したらコミットを止める。
+#       秘密情報が git 履歴オブジェクトに入る前に堰き止めるのが目的。設定は .gitleaks.toml、設計は instructions/secret-scan.md。
+#       gitleaks 未インストール時は導入を促して中断する（fail-closed: 検出器が無いまま素通りさせない）。
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "✋ gitleaks が未インストールです。コミット前スキャンが実行できません。" >&2
+  echo "   導入: brew install gitleaks" >&2
+  echo "   （一時的に飛ばす場合のみ git commit --no-verify。非推奨）" >&2
+  exit 1
+fi
+
+if ! gitleaks protect --staged --no-banner --redact -c "$root/.gitleaks.toml"; then
+  echo "" >&2
+  echo "✋ 秘密情報または個人情報の疑いを検出しました。コミットを中止します。" >&2
+  echo "   対応: 該当箇所を削除・マスキング・匿名化してから再コミットしてください。" >&2
+  echo "   誤検知の場合: .gitleaks.toml の [allowlist] に例示値を追加してください。" >&2
+  exit 1
+fi

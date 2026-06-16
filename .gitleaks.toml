@@ -1,0 +1,60 @@
+# 概要: gitleaks の検出設定。秘密情報（標準ルール）に加え、ドキュメントへ混入しやすく
+#       正規表現が単純で誤検知の少ない個人情報（ホームパス・メール・プライベートIP・電話）を検出する。
+#       L1(pre-commit) と L3(gh アップロード前フック) が同一設定を共有する。
+# 設計: instructions/secret-scan.md。誤検知は [allowlist] に追加してチューニングする。
+title = "test-repo secret & PII scan"
+
+[extend]
+# gitleaks 標準の秘密情報ルール（APIキー・トークン・秘密鍵 等）を土台にする
+useDefault = true
+
+# --- ドキュメント頻出の個人情報ルール（単純正規表現・低誤検知のものだけ） ---
+
+[[rules]]
+id = "home-directory-path"
+description = "ローカルのホームディレクトリパス（ユーザー名が露出）"
+regex = '''(/Users/|/home/)[A-Za-z0-9._-]+/'''
+
+[[rules]]
+id = "windows-home-path"
+description = "Windows のホームディレクトリパス（ユーザー名が露出）"
+regex = '''[Cc]:\\Users\\[^\\/]+\\'''
+
+[[rules]]
+id = "email-address"
+description = "メールアドレス（個人情報）"
+regex = '''[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'''
+
+[[rules]]
+id = "private-ipv4"
+description = "プライベート IPv4 アドレス（内部ネットワーク情報）"
+regex = '''\b(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.\d{1,3}\.\d{1,3})\b'''
+
+[[rules]]
+id = "jp-phone-number"
+description = "日本の電話番号（個人情報）"
+regex = '''\b0\d{1,3}-\d{2,4}-\d{4}\b'''
+
+# --- 誤検知の除外。プレースホルダ・例示用の値はここで逃がす ---
+
+[allowlist]
+description = "ドキュメント用のプレースホルダ・例示値"
+regexTarget = "match"
+regexes = [
+  # 汎用ユーザー名・CI/コンテナの既定ユーザー・<...> 形式のプレースホルダ
+  '''(/Users/|/home/)(user|username|youruser|me|app|node|vscode|runner|ubuntu|root|<[^>]+>|\$\{?[A-Z_]+\}?)/''',
+  '''[Cc]:\\Users\\(user|username|<[^>]+>)\\''',
+  # 例示・通知専用のメールドメイン
+  '''@(example|test|invalid|localhost)\.''',
+  '''noreply@(example|test)\.''',
+  '''@users\.noreply\.github\.com''',
+  # 例示用に予約されたアドレス帯（ドキュメント頻出）
+  '''\b(192\.168\.0\.1|192\.168\.1\.1|10\.0\.0\.1)\b''',
+  '''\b0(90|80|70)-0000-0000\b''',
+]
+paths = [
+  '''.*\.lock$''',
+  # 回帰テストの検体。意図的に秘密情報/個人情報を含むためコミット走査からは除外する。
+  # テスト実行時はランナーが一時ディレクトリへ複製して走査するので検出は機能する（tests/run.sh）。
+  '''tests/fixtures/''',
+]
