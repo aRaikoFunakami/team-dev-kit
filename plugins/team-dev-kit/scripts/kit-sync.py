@@ -208,8 +208,117 @@ def cmd_doctor(args):
         print("✅ 健全")
     return 1 if problems else 0
 
+def merge3(cur_text, base_text, new_text):
+    """git merge-file による 3-way。戻り値 (merged_text, conflicted:bool)。
+    base→new の変更を cur に取り込む。cur が同領域を触っていれば衝突マーカー。"""
+    import tempfile
+    d = tempfile.mkdtemp()
+    try:
+        cf = os.path.join(d, "cur"); bf = os.path.join(d, "base"); nf = os.path.join(d, "new")
+        for p, t in ((cf, cur_text), (bf, base_text), (nf, new_text)):
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(t)
+        # -p: 結果を stdout へ。returncode = 衝突 hunk 数(0=clean, <0=error)
+        r = subprocess.run(["git", "merge-file", "-p",
+                            "-L", "consumer(local)", "-L", "kit(base)", "-L", "kit(new)",
+                            cf, bf, nf], capture_output=True, text=True)
+        return r.stdout, (r.returncode != 0)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+def resolve_ancestor(args, lock):
+    """旧バージョン(lock.version)の templates ディレクトリを得る。
+    --ancestor-dir 指定があればそれ。無ければ marketplace repo の tag v<ver> を clone。"""
+    if args.ancestor_dir:
+        return args.ancestor_dir, None
+    import tempfile
+    tmp = tempfile.mkdtemp()
+    url = f"https://github.com/{lock.get('marketplace', MARKETPLACE)}.git"
+    tag = f"v{lock['version']}"
+    r = subprocess.run(["git", "clone", "--depth", "1", "--branch", tag, url, tmp],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None, f"祖先取得失敗(tag {tag} を {url} から clone できず): {r.stderr.strip()[:200]}"
+    return os.path.join(tmp, "plugins", "team-dev-kit", "templates"), None
+
 def cmd_update(args):
-    print("kit-update は M3 で実装予定", file=sys.stderr); return 3
+    target = args.target
+    if not is_git(target):
+        print("✋ git リポジトリではありません。", file=sys.stderr); return 1
+    lock = load_lock(target)
+    if not lock:
+        print(f"✋ {LOCK} なし。先に /kit-init。", file=sys.stderr); return 1
+    old_ver, new_ver = lock["version"], kit_version()
+    print(f"== kit-update {old_ver} -> {new_ver} target={target} ==")
+    if old_ver == new_ver and not args.force:
+        print("  既に最新。差分なし(--force で再同期可)"); return 0
+
+    anc_dir, err = resolve_ancestor(args, lock)
+    if err:
+        print(f"  ✋ {err}", file=sys.stderr)
+        print("     回避: --ancestor-dir に旧 templates を渡すか、kit repo に tag v<ver> を打つ", file=sys.stderr)
+        return 1
+    assert anc_dir is not None  # err 無し = 解決済
+    dry = args.dry_run
+    conflicts, changed = [], []
+    new_files = managed_files()  # 現(新)バージョンのテンプレ集合
+    lock_managed = {}
+    for rel in sorted(new_files):
+        new_src = new_files[rel]
+        anc_src = os.path.join(anc_dir, rel)
+        dst = os.path.join(target, rel)
+        pol = policy_of(rel)
+        new_text = read(new_src)
+        base_text = read(anc_src) if os.path.exists(anc_src) else None
+        cur_text = read(dst) if os.path.exists(dst) else None
+        lock_managed[rel] = {"sha": managed_sha(rel, new_src), "policy": pol}
+
+        if cur_text is None:
+            # 消費側に無い = kit が新規追加。そのまま置く
+            if not dry:
+                write(dst, new_text)
+                if rel in EXEC_FILES: os.chmod(dst, 0o755)
+            changed.append(f"{rel} (new from kit)"); continue
+        if base_text is None:
+            # 祖先に無いが消費側にはある。3-way 不能。消費側を残し手動扱い
+            print(f"  manual {rel}: 祖先なし。消費側を保持(手動確認)"); continue
+
+        if pol == "managed-block":
+            cb = extract_block(cur_text); bb = extract_block(base_text); nb = extract_block(new_text)
+            nb = nb if nb is not None else new_text   # 新テンプレに block 必須だが防御
+            if cb is None:  # マーカー喪失。block 全体を新で再挿入
+                merged_block, conf = nb, False
+                note = "markers-missing-reinserted"
+            else:
+                merged_block, conf = merge3(cb, bb if bb else cb, nb)
+                note = "block-merged"
+            new_whole = cur_text.replace(cb, merged_block) if cb else (cur_text.rstrip() + "\n\n" + merged_block)
+            if not dry: write(dst, new_whole)
+            (conflicts if conf else changed).append(f"{rel} ({note})")
+        else:
+            if cur_text == new_text:
+                continue  # 変化なし
+            merged, conf = merge3(cur_text, base_text, new_text)
+            if not dry:
+                write(dst, merged)
+                if rel in EXEC_FILES: os.chmod(dst, 0o755)
+            (conflicts if conf else changed).append(rel)
+
+    if not dry:
+        lock["version"] = new_ver; lock["managed"] = lock_managed
+        write(lock_path(target), json.dumps(lock, ensure_ascii=False, indent=2) + "\n")
+
+    print(f"  変更 {len(changed)} 件: " + (", ".join(changed) if changed else "なし"))
+    if conflicts:
+        print(f"  ⚠ 衝突 {len(conflicts)} 件(<<<<<<< マーカーを手で解決): " + ", ".join(conflicts))
+    print(f"  {'(dry) ' if dry else ''}lock -> {new_ver}")
+    if dry:
+        print("✅ dry-run 完了")
+    elif conflicts:
+        print("⚠ 衝突あり。解決してから commit/PR。")
+    else:
+        print("✅ kit-update 完了。差分を確認し feature ブランチで PR。")
+    return 0
 
 def cmd_contribute(args):
     print("kit-contribute は M4 で実装予定", file=sys.stderr); return 3
@@ -217,11 +326,16 @@ def cmd_contribute(args):
 def main():
     ap = argparse.ArgumentParser(prog="kit-sync.py")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    parsers = {}
     for name in ("init", "doctor", "update", "contribute"):
         sp = sub.add_parser(name)
         sp.add_argument("--dry-run", action="store_true")
         sp.add_argument("--force", action="store_true")
         sp.add_argument("--target", default=os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd()))
+        parsers[name] = sp
+    # 旧バージョンの templates を明示指定(無ければ tag v<ver> を clone で取得)
+    parsers["update"].add_argument("--ancestor-dir", default=None)
+    parsers["contribute"].add_argument("--ancestor-dir", default=None)
     args = ap.parse_args()
     return {"init": cmd_init, "doctor": cmd_doctor,
             "update": cmd_update, "contribute": cmd_contribute}[args.cmd](args)
