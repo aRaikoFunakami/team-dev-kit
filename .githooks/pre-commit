@@ -1,6 +1,7 @@
 #!/bin/sh
 # 概要: コミット前フック(L1)。ステージ済み差分を gitleaks で走査し、秘密情報・個人情報を検出したらコミットを止める。
-#       秘密情報が git 履歴オブジェクトに入る前に堰き止めるのが目的。設定は .gitleaks.toml、設計は instructions/secret-scan.md。
+#       秘密情報が git 履歴オブジェクトに入る前に堰き止めるのが目的。設定は repo ルートの .gitleaks.toml
+#       (これが .team-dev-kit/base.gitleaks.toml を extend する)。注意: このファイルは team-dev-kit 管理。プロジェクトは編集しない。
 #       gitleaks 未インストール時は導入を促して中断する（fail-closed: 検出器が無いまま素通りさせない）。
 set -e
 

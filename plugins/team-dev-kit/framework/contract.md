@@ -1,10 +1,8 @@
-<!-- team-dev-kit:start — このブロックは /kit-update が管理する。内側を手で編集しない。プロジェクト固有の記述はブロックの外に書く。 -->
-# AGENTS.md — チーム開発の契約
+# チーム開発の契約（team-dev-kit 管理）
 
-このリポジトリで AI エージェントと人間が作業するための **契約**。迷ったらこのファイルを最優先する。
-ベンダー中立の標準ファイル名（`AGENTS.md`）を使う。Claude Code は `CLAUDE.md` から、他エージェントは各自の設定から本ファイルを参照する。
-
-導入元: [team-dev-kit](https://github.com/aRaikoFunakami/team-dev-kit)。更新は `/kit-update`、改善の還元は `/kit-contribute`。
+このファイルは team-dev-kit が配布・更新する **共通契約**。プロジェクトは編集しない
+（編集しても `/kit-update` で置換される。改善は `/kit-contribute` で上流へ）。
+プロジェクト固有の規約は、このファイルを取り込む `AGENTS.md` 側に書く。
 
 ## 1. 常時守る契約（最重要）
 
@@ -24,13 +22,8 @@
 | **ticket-template / draft / publish / pr-publish** | チケット下書きの作成・発行・PR 化（条件発火） |
 | **kit-init / update / contribute / doctor** | kit のライフサイクル操作（`/kit-*` 明示発火のみ） |
 
-## 3. 参考ドキュメント
+## 3. 秘密情報・個人情報スキャン
 
-- 秘密情報・個人情報スキャン（pre-commit / PreToolUse フックの仕組み・allowlist の足し方）は
-  → [docs/secret-scan.md](docs/secret-scan.md)
-<!-- team-dev-kit:end -->
-
-<!-- ここから下はプロジェクト固有。/kit-update はこの領域に触れない。 -->
-## プロジェクト固有の規約
-
-（プロジェクト概要・起動方法・固有ルールをここに追記する）
+- 人間の `git commit` は `.githooks/pre-commit`（gitleaks）が、Claude の `gh` 発行前は PreToolUse フックが走査する
+- 検出ルールは `.team-dev-kit/base.gitleaks.toml`（編集しない）。プロジェクト固有の allowlist は `.gitleaks.toml` に足す
+- 仕組みと運用の詳細: https://github.com/aRaikoFunakami/team-dev-kit/blob/main/docs/secret-scan.md

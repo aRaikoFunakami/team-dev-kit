@@ -1,0 +1,25 @@
+# 概要: このプロジェクト固有の秘密情報・個人情報スキャン設定(overlay)。
+#       team-dev-kit が配る基盤ルール(.team-dev-kit/base.gitleaks.toml)を継承し、
+#       このプロジェクトだけの allowlist(例示値・誤検知・テスト検体パス)をここに足す。
+#       base は編集しない(/kit-update で置換される)。このファイルは team-dev-kit が触らない。
+# 注意: [extend] path は実行時のカレントディレクトリ基準。pre-commit と gh 発行前フックは
+#       いずれも repo ルートで走るため、ルート相対のこのパスで解決する。
+title = "secret & PII scan (project overlay)"
+
+[extend]
+path = ".team-dev-kit/base.gitleaks.toml"
+
+# プロジェクト固有の許可(例示値・誤検知の除外・テスト検体)が必要になったら、
+# 下の [allowlist] ブロックごとコメントアウトを外して使う。
+# 注意: gitleaks は [allowlist] に最低1つの check(regexes/paths/commits/stopwords)を要求する。
+#       空の [allowlist] を残すと設定読込が失敗するため、使う時だけ有効化する。
+#
+# [allowlist]
+# description = "このプロジェクト固有の許可"
+# regexTarget = "match"
+# regexes = [
+#   '''\bAKIAEXAMPLE0000000000\b''',
+# ]
+# paths = [
+#   '''tests/fixtures/''',
+# ]

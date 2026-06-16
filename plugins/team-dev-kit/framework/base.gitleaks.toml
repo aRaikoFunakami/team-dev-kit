@@ -1,8 +1,10 @@
-# 概要: gitleaks の検出設定。秘密情報（標準ルール）に加え、ドキュメントへ混入しやすく
-#       正規表現が単純で誤検知の少ない個人情報（ホームパス・メール・プライベートIP・電話）を検出する。
-#       L1(pre-commit) と L3(gh アップロード前フック) が同一設定を共有する。
-# 設計: instructions/secret-scan.md。誤検知は [allowlist] に追加してチューニングする。
-title = "test-repo secret & PII scan"
+# 概要: team-dev-kit が配布する gitleaks 検出ルールの「基盤(base)」。秘密情報(標準ルール)に加え、
+#       ドキュメントへ混入しやすく正規表現が単純で誤検知の少ない個人情報(ホームパス・メール・
+#       プライベートIP・電話)を検出する。pre-commit(L1) と gh 発行前フック(L3) が共有する。
+# 注意: このファイルは team-dev-kit が管理する。プロジェクトは編集しない(/kit-update で置換される)。
+#       プロジェクト固有の allowlist・誤検知除外は、これを extend した repo ルートの .gitleaks.toml に書く。
+# 設計: https://github.com/aRaikoFunakami/team-dev-kit/blob/main/docs/secret-scan.md
+title = "team-dev-kit base secret & PII rules"
 
 [extend]
 # gitleaks 標準の秘密情報ルール（APIキー・トークン・秘密鍵 等）を土台にする
@@ -35,10 +37,10 @@ id = "jp-phone-number"
 description = "日本の電話番号（個人情報）"
 regex = '''\b0\d{1,3}-\d{2,4}-\d{4}\b'''
 
-# --- 誤検知の除外。プレースホルダ・例示用の値はここで逃がす ---
+# --- 全プロジェクト共通の誤検知除外（例示・プレースホルダ）。プロジェクト固有は overlay 側へ ---
 
 [allowlist]
-description = "ドキュメント用のプレースホルダ・例示値"
+description = "ドキュメント用のプレースホルダ・例示値（共通）"
 regexTarget = "match"
 regexes = [
   # 汎用ユーザー名・CI/コンテナの既定ユーザー・<...> 形式のプレースホルダ
@@ -54,7 +56,4 @@ regexes = [
 ]
 paths = [
   '''.*\.lock$''',
-  # 回帰テストの検体。意図的に秘密情報/個人情報を含むためコミット走査からは除外する。
-  # テスト実行時はランナーが一時ディレクトリへ複製して走査するので検出は機能する（tests/run.sh）。
-  '''tests/fixtures/''',
 ]

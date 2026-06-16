@@ -94,6 +94,9 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   exit 2
 fi
 
+# overlay の .gitleaks.toml は [extend] path を CWD 基準で解決するため repo ルートへ移動してから走査する
+# (--source は絶対パスの scandir なので CWD 変更の影響を受けない)。
+cd "$root" || { echo "✋ repo ルート($root)へ移動できません。" >&2; exit 2; }
 if ! gitleaks detect --no-git --source "$scandir" --no-banner --redact -c "$config"; then
   echo "" >&2
   echo "✋ アップロード予定の本文に秘密情報または個人情報の疑いを検出しました。送信を拒否します。" >&2
