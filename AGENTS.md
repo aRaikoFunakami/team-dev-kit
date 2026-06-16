@@ -24,4 +24,5 @@ team-dev-kit リポジトリ自身の開発契約。kit は自分のルールを
 
 ## マイルストーン
 
-M0 構造+manifest（済） → M1 plugin 出荷 → M2 kit-init+lock → M3 kit-update(3-way) → M4 kit-contribute。
+M0 構造+manifest・M1 plugin 出荷・M2 kit-init+lock・M3 kit-update(3-way)・M4 kit-contribute = 全て実装済。
+検証は `sh tests/smoke.sh`（20 アサーション）。残: marketplace 公開（rollout 判断）と Claude Code 上での `/plugin` 実機確認。

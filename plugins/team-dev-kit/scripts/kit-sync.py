@@ -321,7 +321,54 @@ def cmd_update(args):
     return 0
 
 def cmd_contribute(args):
-    print("kit-contribute は M4 で実装予定", file=sys.stderr); return 3
+    """作業ツリーの改変を上流(kit)への貢献候補として抽出する。
+    判定: lock.sha と異なる(ローカル改変)かつ kit 現行テンプレとも異なるファイル。
+    --staging DIR --apply で kit の templates/ レイアウトへステージングする(push はしない)。"""
+    import difflib
+    target = args.target
+    lock = load_lock(target)
+    if not lock:
+        print(f"✋ {LOCK} なし。先に /kit-init。", file=sys.stderr); return 1
+    print(f"== kit-contribute target={target} (kit v{kit_version()}) ==")
+    candidates, manual = [], []
+    for rel, meta in sorted(lock.get("managed", {}).items()):
+        dst = os.path.join(target, rel)
+        if not os.path.exists(dst):
+            continue
+        cur_unit = consumer_block_or_full(rel, dst)        # managed-block は block のみ
+        if sha(cur_unit) == meta["sha"]:
+            continue                                       # ローカル改変なし
+        kit_src = os.path.join(templates_dir(), rel)
+        kit_text = read(kit_src) if os.path.exists(kit_src) else ""
+        kit_unit = extract_block(kit_text) or kit_text if policy_of(rel) == "managed-block" else kit_text
+        if cur_unit == kit_unit:
+            continue                                       # 既に kit に取り込み済
+        if policy_of(rel) == "managed-block":
+            manual.append(rel); continue                   # 契約の block 変更は手動レビュー
+        candidates.append(rel)
+        diff = difflib.unified_diff(
+            kit_text.splitlines(), read(dst).splitlines(),
+            fromfile=f"kit/{rel}", tofile=f"local/{rel}", lineterm="")
+        body = "\n".join(list(diff)[:40])
+        print(f"\n--- 候補: {rel} ---\n{body}")
+
+    if not candidates and not manual:
+        print("  上流候補なし(ローカル改変が無い、または既に kit に取り込み済)"); return 0
+
+    if args.staging and candidates:
+        os.makedirs(args.staging, exist_ok=True)
+        for rel in candidates:
+            sp = os.path.join(args.staging, "templates", rel)
+            if args.apply:
+                write(sp, read(os.path.join(target, rel)))
+        print(f"\n  {'(dry) ' if not args.apply else ''}staged {len(candidates)} 件 -> {args.staging}/templates/ "
+              f"(--apply で書き出し)")
+
+    print(f"\n候補 {len(candidates)} 件: {', '.join(candidates) or 'なし'}")
+    if manual:
+        print(f"手動レビュー(AGENTS.md block 等) {len(manual)} 件: {', '.join(manual)}")
+    print("次: kit を fork/branch し staging を templates/ へ反映 → kit へ draft PR(kit-contribute skill が誘導)")
+    return 0
 
 def main():
     ap = argparse.ArgumentParser(prog="kit-sync.py")
@@ -335,7 +382,8 @@ def main():
         parsers[name] = sp
     # 旧バージョンの templates を明示指定(無ければ tag v<ver> を clone で取得)
     parsers["update"].add_argument("--ancestor-dir", default=None)
-    parsers["contribute"].add_argument("--ancestor-dir", default=None)
+    parsers["contribute"].add_argument("--staging", default=None)
+    parsers["contribute"].add_argument("--apply", action="store_true")
     args = ap.parse_args()
     return {"init": cmd_init, "doctor": cmd_doctor,
             "update": cmd_update, "contribute": cmd_contribute}[args.cmd](args)

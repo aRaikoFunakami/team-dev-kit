@@ -62,5 +62,6 @@ clone → trust → skill が自動で有効。続いて `/kit-init` で Plane B
 
 ## ステータス
 
-M0 構造+manifest（済）。M1 plugin 出荷 → M2 kit-init+lock → M3 kit-update → M4 kit-contribute。
-詳細は `AGENTS.md`。
+M0〜M4 実装済（plugin・lockfile・kit-init/update/contribute/doctor・3-way merge）。
+検証: `sh tests/smoke.sh`（20 アサーション全通過）。
+残: marketplace 公開（rollout 判断）、Claude Code 上での `/plugin` 実機確認。詳細は `AGENTS.md`。
