@@ -1,75 +1,264 @@
 # team-dev-kit
 
-チーム開発の **決まりごと（ルール・ワークフロー）と人為ミス排除のガードレール** を、
-Claude Code を前提に多数のリポジトリへ配り、更新し、現場の改善を吸い上げる kit。
+**チームの開発ルールを「覚えるもの」から「自動で守られるもの」に変えるキットです。**
 
-狙い:
+ルールをドキュメントに書いても、新しく入った人は全部は読めないし、覚えても忘れます。
+team-dev-kit はルールを Claude Code の **Skill** と **Hook** として配るので、
+clone した瞬間からあなたの開発環境にルールが組み込まれます。
 
-- **オンボーディングの即時化** — ルールを知らない初心者が clone 直後からルール通りに開発を始められる
-- **人為ミスの排除** — 秘密情報・個人情報の漏洩を、人間の `git commit`（pre-commit）と Claude の外部発行（PreToolUse フック）の二経路で機械的に止める
+> 覚えなくていい。間違えても自動で止まる。だから初日から正しく開発できる。
 
-## アーキテクチャ: 2 平面
+---
 
-実行境界が違うので 1 つの配布物にせず 2 平面に分ける。
+## これは何の役に立つのか（30秒で）
 
-### Plane A — Claude ランタイム資産（plugin + marketplace）
-`plugins/team-dev-kit/` を Claude Code プラグインとして配る。skill・PreToolUse フックを含む。
-配布/更新は `/plugin` がネイティブに行う（バージョン管理つき）。リポジトリツリーにはコピーしない。
+新しくチームに入ったとき、ふつうはこうなります。
 
-- 業務 skill（条件発火）: `git-commit`, `github-workflow`, `doc-writing`, `ticket-*`
-- kit-* skill（**`/kit-*` 明示発火のみ**・M2 以降）: `kit-init`, `kit-update`, `kit-contribute`, `kit-doctor`
-- フック（自動・ガードレール）: PreToolUse egress（gh 発行前の秘密情報スキャン）
+| よくある困りごと | team-dev-kit があると |
+|---|---|
+| ルールが Confluence / README に散らばっていて読みきれない | clone した時点で Claude Code がルールを理解している |
+| コミットメッセージの書き方が分からない | コミット時に Skill が自動で正しい形を提案 |
+| PR / Issue の書き方をいちいち調べる | 作成時にワークフローが自動適用される |
+| うっかり API キーやパスワードをコミットしてしまう | **commit 前に自動検査してブロック**。事故が起きない |
+| レビューで「ルール違反です」と何度も指摘される | そもそも違反できない仕組みになっている |
 
-### Plane B — リポジトリに commit すべきファイル（テンプレ同期 + lockfile）
-`templates/` 配下。これらは **人間や GitHub に効かせる必要**があり plugin では配れない。
+ポイントは、ルールを**人の記憶や注意力に頼らない**こと。
+新人がミスをしても、人ではなく仕組み（Hook・Skill）が止めてくれます。
 
-Plane B はさらに 2 種に分かれる（設定するもの／そのまま使うものの分離）:
+---
 
-- **framework（共通・編集禁止）** — `/kit-update` が**置換**する:
-  - `.team-dev-kit/contract.md` — チーム共通契約
-  - `.team-dev-kit/base.gitleaks.toml` — スキャンルール
-  - `.githooks/pre-commit` — 人間の `git commit` を止める（Claude フックは人間の端末に届かない）
-- **config（プロジェクトが書く・install-once）** — kit は再配置しない:
-  - `AGENTS.md` — `@.team-dev-kit/contract.md` を import + プロジェクト固有節
-  - `.gitleaks.toml` — `.team-dev-kit/base.gitleaks.toml` を extend + プロジェクト固有 allowlist
-  - `.github/*` — Issue/PR テンプレ
+## QuickStart
 
-glue は読み手で使い分ける: agent 向け契約は `@import`、gitleaks は `[extend].path`。これで framework は誰も触らず置換で更新でき、config は kit が触らない。
+あなたの状況で読む場所が変わります。
 
-provenance は消費側に commit する `.team-dev-kit.lock`（version + framework hash + config 一覧）。framework は drift 検出・置換、config は install-once 判定に使う。
+- **A. すでに team-dev-kit が導入済みのリポジトリに参加した** → [パターンA](#パターンa-チームに参加しただけの人最短) （ほぼこれ）
+- **B. 自分のチーム / リポジトリに team-dev-kit を初めて入れる** → [パターンB](#パターンb-リポジトリに初めて導入する人一度だけ)
 
-## ライフサイクル
+---
 
-| フェーズ | Plane A | Plane B | ゲート |
-|---------|---------|---------|--------|
-| 導入 | `.claude/settings.json` に marketplace+plugin を commit → clone で自動有効 | `/kit-init` で配置 + lock | PR |
-| 運用 | skill 自動発火・egress フック | git pre-commit が秘密情報を止める | PR テンプレ |
-| 更新 | `/plugin update` | `/kit-update`（framework を置換・config は不可侵） | PR |
-| 還元 | — | `/kit-contribute`（差分検出 → kit へ PR） | PR |
+### パターンA: チームに参加しただけの人（最短）
 
-更新も還元も **PR が唯一のレビュー境界**。プロジェクト間の直コピーは禁止。
+リポジトリにすでに導入されていれば、やることは **3つだけ**です。
 
-## 導入（M1 出荷後）
+```bash
+git clone <リポジトリURL>
+cd <リポジトリ>
+```
 
-消費プロジェクトの `.claude/settings.json`（commit する）:
+1. **Claude Code を起動する**
+2. **Trust（信頼）を許可する**
+3. 以上。終わりです。
+
+これでチームのルールが自動で効く状態になっています。
+コミットや PR を作るとき、Claude Code が勝手に正しいやり方を案内してくれます。
+
+> 確認したいとき: Claude Code で `/kit-doctor` と打つと、ちゃんと効いているか診断できます。
+
+---
+
+### パターンB: リポジトリに初めて導入する人（一度だけ）
+
+> この作業はチームで誰か一人が一度だけ行えば OK です。以後の参加者はパターンAで済みます。
+
+#### 前提
+
+以下がインストール済みであること。
+
+```bash
+git --version
+python3 --version
+gitleaks version    # 秘密情報スキャンに使う
+```
+
+Claude Code が利用できること。
+
+#### 手順
+
+**1. プラグインを有効化する**
+
+リポジトリの `.claude/settings.json` に追記します（なければ作成）。
+
 ```json
 {
   "extraKnownMarketplaces": {
-    "team-dev-kit": { "source": { "source": "github", "repo": "aRaikoFunakami/team-dev-kit" } }
+    "team-dev-kit": {
+      "source": {
+        "source": "github",
+        "repo": "aRaikoFunakami/team-dev-kit"
+      }
+    }
   },
-  "enabledPlugins": { "team-dev-kit@team-dev-kit": true }
+  "enabledPlugins": {
+    "team-dev-kit@team-dev-kit": true
+  }
 }
 ```
-clone → trust → skill が自動で有効。続いて `/kit-init` で Plane B を配置。
 
-開発中はローカル marketplace で検証:
+これを commit すると、以後この repo を clone した人は **パターンA だけ**で済みます。
+
+**2. Claude Code を起動して初期化する**
+
+Claude Code 上で実行:
+
+```text
+/kit-init
 ```
-/plugin marketplace add ./team-dev-kit
-/plugin install team-dev-kit@team-dev-kit
+
+ルール本体や秘密情報スキャン設定など、必要なファイルが自動配置されます。
+
+```text
+.team-dev-kit/      ← ルール本体（編集禁止）
+.githooks/          ← commit 時の自動検査
+AGENTS.md           ← プロジェクト固有ルールを書く場所（編集OK）
+.gitleaks.toml      ← 秘密情報の検出ルール（編集OK）
+.github/            ← Issue / PR テンプレート（編集OK）
+.team-dev-kit.lock  ← 管理用
 ```
 
-## ステータス
+**3. 動作確認する**
 
-M0〜M5 実装済（plugin・lockfile・kit-init/update/contribute/doctor、framework/config 分離、@import、gitleaks overlay→base）。
-検証: `sh tests/smoke.sh`（29 アサーション全通過）。
-残: marketplace 公開（rollout 判断）、Claude Code 上での `/plugin` 実機確認。詳細は `AGENTS.md`。
+```text
+/kit-doctor
+```
+
+こう出れば成功です。
+
+```text
+dep gitleaks: ok
+dep git: ok
+core.hooksPath: .githooks
+version: ok
+
+✅ healthy
+```
+
+これで導入は完了です。
+配置されたファイルはこのあとチームに共有する必要がありますが、
+そのコミット & PR は次の [実際に使ってみる](#実際に使ってみるissue--開発--pr--マージ) で
+**Claude Code に頼んでやってもらいます**（最初の練習にちょうど良い）。
+
+---
+
+## 実際に使ってみる（Issue → 開発 → PR → マージ）
+
+team-dev-kit のいちばん大事なところは、**ルールを指示しなくていい**ことです。
+「やりたいこと」を Claude Code に言うだけで、コミット規約・ブランチ運用・Issue/PR の紐付け・
+秘密情報チェックは Skill が**勝手に・正しく**やります。手順もコマンドも覚える必要はありません。
+
+たとえば、こんな会話だけで一連の開発が回ります。
+
+```text
+あなた> ログイン画面に入力チェックを足したい。Issue を立てて取りかかって
+あなた> （Claude と一緒にコードを書く）
+あなた> できたのでコミットして PR まで出して
+あなた> レビュー通ったのでマージして
+```
+
+これだけで裏側では自動的に:
+
+- Issue がテンプレートに沿って作られる
+- 専用ブランチが切られる（main への直接コミットは禁止）
+- コミットメッセージが規約形式（`type(scope): subject`）で生成される
+- PR が Issue に紐付く（`Closes #N`）
+- commit 前・発行前に秘密情報が検査され、混ざっていれば**止まる**
+
+> 📝 デフォルトブランチについて: 本 README では `main` に統一して説明します。
+> 古くからあるリポジトリは `master`、GitHub で新規作成したリポジトリは `main` がデフォルトのため、
+> 両方が現場に存在します。Skill は実際のデフォルトブランチを自動判定して動くので、
+> どちらのリポジトリでも「main に直接 push しない」というルールはそのまま機能します。
+
+### 指示しすぎない、がコツ
+
+| ❌ こう言う必要はない | ✅ これで十分 |
+|---|---|
+| 「`type(scope): subject` 形式でコミットメッセージを書いて」 | 「コミットして」 |
+| 「ブランチを切って、main には直接 push しないで」 | 「取りかかって」 |
+| 「PR 本文に `Closes #12` を入れて Issue と紐付けて」 | 「PR を出して」 |
+
+ルールは Skill 側に入っています。あなたは**目的だけ**を伝えればいい、というのが team-dev-kit の狙いです。
+
+> 💡 導入直後の最初の練習に最適なのが、まさにこの流れで
+> 「team-dev-kit を入れた変更」自体をコミット → PR → マージしてみることです。
+
+---
+
+## 何が自動でやってくれるのか
+
+### ルールの自動適用
+
+共通ルールが Skill として配布され、こういう作業のときに自動で適切なルールが効きます。
+
+- コミット作成
+- GitHub 操作（Issue / PR）
+- 設計ドキュメント作成
+- チケット作成
+
+覚える必要はありません。作業を始めると Claude Code が案内します。
+
+### 秘密情報の漏洩防止（二重ガード）
+
+API キー・トークン・個人情報・認証情報を、**2つの経路**で機械的にブロックします。
+
+```text
+あなたが git commit       → pre-commit hook → gitleaks → 危険なら commit を拒否
+Claude が gh issue/pr     → PreToolUse hook → gitleaks → 危険なら発行を拒否
+```
+
+人がうっかりしても、仕組みが止めます。
+
+> ⚠️ 動作確認するときの注意: `AKIAIOSFODNN7EXAMPLE` のような**ドキュメント頻出の例示キーや連番文字列は、
+> gitleaks がわざと無視します**（誤検知を避ける仕様）。「ブロックされない＝壊れている」ではありません。
+> 試すときは、本物に近いランダムな値を使ってください。
+
+### ルールの一括配布と改善の還元
+
+- チーム標準を複数リポジトリへ配れる
+- あるプロジェクトで改善したルールを本体に戻し、全リポジトリへ展開できる（`/kit-contribute`）
+
+---
+
+## 日常で使うコマンド
+
+| やりたいこと | コマンド |
+|---|---|
+| ちゃんと効いているか診断 | `/kit-doctor` |
+| ルールを最新版に更新 | `/plugin update team-dev-kit@team-dev-kit` → `/kit-update` |
+| 共通ルールへの改善を提案 | `/kit-contribute` |
+
+---
+
+## よくある質問
+
+**Q. 新しいメンバーが入ったら何をすればいい？**
+`git clone` → Claude Code 起動 → Trust の3つだけ（[パターンA](#パターンa-チームに参加しただけの人最短)）。
+
+**Q. `AGENTS.md` は編集していい？**
+はい。プロジェクト固有のルールを書く場所です。
+
+**Q. `.team-dev-kit/` 配下は編集していい？**
+いいえ。更新時に置き換えられます。改善したいときは `/kit-contribute` を使ってください。
+
+**Q. gitleaks が誤検知する**
+`.gitleaks.toml` に allowlist を追加してください。共通ルールに反映したい場合は本体へ提案を。
+
+---
+
+## 編集していいファイル / だめなファイル
+
+| ファイル | 編集 | 理由 |
+|---|---|---|
+| `AGENTS.md` | ✅ OK | プロジェクト固有ルールを書く場所 |
+| `.gitleaks.toml` | ✅ OK | 自プロジェクトの検出ルール調整 |
+| `.github/*` | ✅ OK | Issue / PR テンプレート |
+| `.team-dev-kit/*` | ❌ 禁止 | 共通ルール本体。更新時に置換される |
+| `.githooks/*` | ❌ 禁止 | 共通フック本体。更新時に置換される |
+
+---
+
+## もっと詳しく（仕組みを知りたい人向け）
+
+アーキテクチャ（Plane A / Plane B の2層構造、framework と config の分離、
+lockfile による同期、秘密情報スキャンの2ゲート設計など）は
+[`docs/architecture.md`](docs/architecture.md) を参照してください。
+
+ふだん使うだけならこの README で十分です。
