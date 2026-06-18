@@ -20,10 +20,10 @@ Issue⇄PR の双方向リンクは PR 本文の closing keyword でのみ生成
    - `$ARGUMENTS` に番号（`#123` または `123`）が渡されていればそれを使う。
    - 無ければ現在のブランチ名を取得し、`feature/<n>-...` / `bugfix/<n>-...` / `hotfix/<n>-...` / `docs/<n>-...` の先頭から issue 番号 `<n>` を抽出する。
    - 抽出できない（番号を含まないブランチ名）場合は推測せず、ユーザーに issue 番号を確認する。
-   - 現在のブランチが default ブランチ（`master`）の場合は中止し、feature ブランチで実行するよう促す。
+   - 現在のブランチが default ブランチ（通常 `main`、旧 repo は `master`）の場合は中止し、feature ブランチで実行するよう促す。
 
 2. **base ブランチの決定**
-   - base は default ブランチ（`master`）を既定とする。`gh repo view --json defaultBranchRef -q .defaultBranchRef.name` で確認する。
+   - base は default ブランチを既定とする。`gh repo view --json defaultBranchRef -q .defaultBranchRef.name` で取得し決め打ちしない（`main` / `master` どちらでも正しく動く）。
    - closing keyword はマージ先が default ブランチのときのみ発火する。base が default 以外になる場合はその旨を警告し、マージ後に Development サイドバーから手動で Issue を紐付ける必要があると伝える。
 
 3. **コミットの push**
@@ -33,7 +33,7 @@ Issue⇄PR の双方向リンクは PR 本文の closing keyword でのみ生成
 4. **PR 本文の生成**
    - `.github/PULL_REQUEST_TEMPLATE.md` があればその節構造に沿う。無ければ Related Issue / 変更概要 / テスト / チェックの節で組む。
    - 本文の先頭付近に **必ず** `Closes #<n>` を入れる（`Fixes` / `Resolves` でも可）。これが Issue⇄PR 双方向リンクの生成条件。
-   - 変更概要は `git log master..HEAD` と `git diff master...HEAD` を確認して会話/コミットから組む。捏造しない。
+   - 変更概要は `git log "$BASE"..HEAD` と `git diff "$BASE"...HEAD`（`$BASE` は上記で取得した default ブランチ）を確認して会話/コミットから組む。捏造しない。
    - 本文は `/tmp/ticket-pr-publish-body-<branch>.txt` に書き出す。
 
 5. **PR タイトルの決定**
