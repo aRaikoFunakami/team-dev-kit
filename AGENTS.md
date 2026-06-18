@@ -24,7 +24,7 @@ team-dev-kit リポジトリ自身の開発契約。kit は自分のルールを
 - consumer 側の glue: `AGENTS.md` が `@.team-dev-kit/contract.md` を import、`.gitleaks.toml` が `.team-dev-kit/base.gitleaks.toml` を extend
 - 秘密情報スキャンの設計は `docs/secret-scan.md`
 
-## マイルストーン
+## サンドボックス
 
-M0〜M4（plugin・lock・init/update/contribute/doctor）+ M5（framework/config 分離・@import・gitleaks overlay→base・3-way 撤去）= 実装済。
-検証は `sh tests/smoke.sh`（29 アサーション全通過）。残: marketplace 公開（rollout 判断）と Claude Code 上での `/plugin` 実機確認。
+実装したスキルとHook等は ./sandbox-team-dev-kit で実際にテストすることで有効性を確かめること
+
