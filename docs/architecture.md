@@ -9,116 +9,119 @@
 - **オンボーディングの即時化** — ルールを知らない初心者が clone 直後からルール通りに開発を始められる
 - **人為ミスの排除** — 秘密情報・個人情報の漏洩を、人間の `git commit`（pre-commit）と Claude の外部発行
   （PreToolUse フック）の二経路で機械的に止める
+- **他プロジェクトへの非干渉** — 既定で導入物はすべて対象プロジェクト配下に置き、`$HOME` を汚さない
 
-## 2. いちばん大事な考え方: 2つの層（A層・B層）
+## 2. 配り方: 単一のブートストラップ
 
-この kit が配るものは、大きく **2つの層** に分かれている。
+kit は **`bootstrap.sh` を唯一の導入/更新導線**とする。対象リポジトリのルートで `curl | sh` すると、
+kit 本体（upstream）から必要なファイルを取得し、**そのプロジェクト配下にだけ**配置する。
 
-- **A層** = Claude Code が利用する道具の層
-- **B層** = プロジェクトのリポジトリに配置され、人間の `git commit` と GitHub に効かせる層
+```bash
+# プロジェクトローカル導入（既定。$HOME に何も置かない）
+curl -fsSL https://raw.githubusercontent.com/aRaikoFunakami/team-dev-kit/main/bootstrap.sh | sh
 
-なぜ層を分けるのか。「誰に効かせるか」「どう配って、どう更新するか」が両者でまったく違うからである。
-ひとつにまとめると、片方だけ直したいときにもう片方まで壊しかねない。だから最初から別々にしている。
+# 明示的に全プロジェクトで使う場合のみ skill を $HOME 配下へ
+curl -fsSL .../bootstrap.sh | sh -s -- --global
+```
 
-層を分けず、A層とB層を同じディレクトリにまとめて配る案も検討した。配布経路が 1 本で済む利点はあるが、
-A層は Claude Code に渡す道具なのでリポジトリの履歴に残したくない一方、B層は clone した全員のリポジトリに
-残らないと意味がない。この正反対の要求を同時に満たせないため、まとめる案は捨てた。失うものは配布経路の単純さ、
-得るものは「片方を更新しても、もう片方を壊さない」独立性である。
+plugin marketplace 方式を採らない理由: marketplace は skill 実体を `~/.claude/plugins` に登録し、有効化も
+`~/.claude/settings.json` に入りがちで、**他プロジェクトへ干渉する**。また「skill を有効化しないと導入
+コマンドが呼べない」ブートストラップの循環も生む。bootstrap は shell から直接走るためこの循環がなく、
+配置物はすべてリポジトリ配下に commit される。更新は **bootstrap の再実行**（最新を取得して置換）で行う。
 
-| | A層（Claude Code が利用する） | B層（プロジェクトのリポジトリに配置される） |
+## 3. いちばん大事な考え方: 2つの層（A層・B層）
+
+bootstrap が配るものは、効かせる相手で **2つの層** に分かれる。両方ともプロジェクトのリポジトリに
+commit されるが、**誰に効かせるか**が違う。
+
+| | A層（Claude Code に効かせる） | B層（人間の `git commit`・GitHub に効かせる） |
 |---|---|---|
-| 配布 | plugin marketplace | `git commit` |
-| 更新 | `/plugin update`（ネイティブ） | `/kit-update`（framework 置換）/ install-once（config） |
-| 配置先 | plugin 配下（リポジトリツリー外） | `.team-dev-kit/`, `.githooks/`, `AGENTS.md`, `.gitleaks.toml`, `.github/` |
-| 効かせる相手 | Claude Code | 人間の `git commit`・GitHub |
-| 中身 | skill・PreToolUse フック・同期エンジン・テンプレ原本 | framework（共通・編集禁止）・config（プロジェクト所有） |
+| 中身 | skill（`.claude/skills/`）+ PreToolUse egress フック（`.claude/settings.json` + `.team-dev-kit/egress-scan.sh`） | framework（共通・編集禁止）+ config（プロジェクト所有） |
+| 効かせる相手 | Claude Code（条件発火で手続きを適用） | 人間の `git commit`（pre-commit）・GitHub（Issue/PR テンプレ） |
+| 配置 | bootstrap がコピー | bootstrap がコピー |
+| 更新 | bootstrap 再実行で置換 | framework=再実行（`--force`）で置換 / config=install-once |
 
-**もう少しかみくだく**: A層は Claude Code に「やり方」を教える道具なので、リポジトリの履歴に残さず、
-すぐ使える状態で届けたい。B層は人間の commit や GitHub への投稿をその場で止める番人なので、
-リポジトリに置いて clone した人全員に残らないと意味がない。役割が逆向きなので一緒にできない。
+A層は「Claude に渡す指示書」、B層は「人間の commit と GitHub に効くガードレール」。どちらも repo に
+commit されるので、clone した全員に同じルールが届く。
 
 ### B層はさらに 2 種類: framework と config
 
-B層の中身も「全員で共有して触らないもの（framework）」と「各プロジェクトが自由に書くもの（config）」に
-分かれる。理由は同じで、勝手に上書きしてよいか／ダメかが正反対だからである。
+B層の中身は「全員で共有して触らないもの（framework）」と「各プロジェクトが自由に書くもの（config）」に
+分かれる。勝手に上書きしてよいか／ダメかが正反対だからである。
 
 | | framework（共通・編集禁止） | config（プロジェクトが書く・install-once） |
 |---|---|---|
 | 所有 | kit | プロジェクト |
 | 編集 | 禁止（契約違反） | 期待・推奨 |
-| 更新 | `/kit-update` が**置換**（3-way merge なし） | kit は再配置しない（新規 starter のみ追加） |
-| 還元 | `/kit-contribute` で kit へ PR | 還元しない（プロジェクト固有） |
+| 更新 | bootstrap 再実行（`--force`）が**置換** | bootstrap は再配置しない（既存があれば glue のみ注入） |
+| 還元 | 本体リポジトリへ Issue / PR | 還元しない（プロジェクト固有） |
 | 例 | `contract.md`, `base.gitleaks.toml`, `pre-commit` | `AGENTS.md`, `.gitleaks.toml`, `.github/*` |
 
-この 2 種類を裏でつなぐ仕組み（**glue＝のりづけ役**）は、読む相手によって 2 通り使い分ける:
+framework と config を裏でつなぐ仕組み（**glue＝のりづけ役**）は、読む相手によって 2 通り使い分ける:
 
 - **`@import`**（agent 向け契約）: `AGENTS.md` が `@.team-dev-kit/contract.md` を取り込む
 - **`[extend].path`**（gitleaks）: `.gitleaks.toml` が `.team-dev-kit/base.gitleaks.toml` を extend
 
-これで framework は誰も触らず置換で更新でき、config は kit が触らない。
+**既存の独自 `AGENTS.md` / `.gitleaks.toml` がある場合**、bootstrap は内容を保持したまま、この glue だけを
+冪等注入する（無ければ追記・あれば温存）。これにより「ファイルは温存したのに共通契約や秘密ガードが
+黙って効かない」事故を防ぐ。
 
-## 3. 全体像
+## 4. 全体像
 
-詳細図に入る前に、登場人物と流れだけを示す。kit 本体（upstream）が A層・B層の両方を配り、
-各プロジェクトのリポジトリがそれを受け取る。受け取ったあと、人間の commit と Claude Code の発行は
-それぞれ別のゲートで秘密情報をチェックされる。
+kit 本体（upstream）の `bootstrap.sh` が A層・B層の両方を対象リポジトリへ配置する。配置後、人間の commit と
+Claude Code の発行はそれぞれ別のゲートで秘密情報をチェックされる。
 
 ```mermaid
 graph LR
     KIT["team-dev-kit リポジトリ<br/>（kit 本体・upstream）"]
+    BS["bootstrap.sh<br/>（curl | sh）"]
     REPO["プロジェクトのリポジトリ<br/>（kit を受け取る側）"]
     HUMAN["👤 人間の git commit"]
     CLAUDE["🤖 Claude Code の発行<br/>（gh issue/pr create）"]
     GH["GitHub"]
 
-    KIT -->|A層: Claude Code 用の道具を配る| REPO
-    KIT -->|B層: リポジトリに置くファイルを配る| REPO
+    KIT --> BS
+    BS -->|A層: skill + egress フックを配置| REPO
+    BS -->|B層: ガードレール/テンプレを配置| REPO
     HUMAN -->|L1 ゲートで秘密情報チェック| REPO
     CLAUDE -->|L3 ゲートで秘密情報チェック| GH
     REPO --> GH
 ```
 
-A層は「Claude Code に渡す道具」、B層は「リポジトリに置くファイル」。次節以降の図はこの 2 つを
-さらに分解したものなので、迷ったらこの全体像に戻ること。
-
-## 4. 詳細ダイアグラム
-
-次の図は全体像の各要素を実ファイル名まで展開したものである。初読では「A層＝plugin 配下」「B層＝
-プロジェクトのリポジトリ配下」「下半分＝2 つの秘密情報ゲート」の 3 ブロックに分かれている、とだけ
-押さえれば足りる。
+## 5. 詳細ダイアグラム
 
 ```mermaid
 graph TB
     subgraph KIT["team-dev-kit リポジトリ (upstream)"]
-        subgraph PA["A層 — plugins/team-dev-kit/ (plugin)"]
-            SK["skills/<br/>業務skill: git-commit, github-workflow,<br/>doc-writing, ticket-*<br/>kit-* skill: init/update/contribute/doctor"]
-            HK["hooks/hooks.json<br/>PreToolUse: egress-scan.sh"]
-            SC["scripts/<br/>kit-sync.py (同期エンジン)<br/>egress-scan.sh (発行ゲート)"]
-            FW["framework/ (原本・共通)<br/>contract.md<br/>base.gitleaks.toml<br/>pre-commit"]
-            CS["config-starters/ (原本・雛形)<br/>AGENTS.md, gitleaks.toml, github/*"]
+        BSH["bootstrap.sh（唯一の導線）"]
+        subgraph SRC["plugins/team-dev-kit/ (配布物の真実)"]
+            SK["skills/<br/>業務skill: git-commit, github-workflow,<br/>doc-writing, ticket-*"]
+            SC["scripts/egress-scan.sh（L3 ゲート本体）"]
+            FW["framework/ (原本・共通)<br/>contract.md / base.gitleaks.toml / pre-commit"]
+            CS["config-starters/ (原本・雛形)<br/>AGENTS.md / gitleaks.toml / github/*"]
         end
-        MP[".claude-plugin/marketplace.json"]
     end
 
     subgraph CONSUMER["プロジェクトのリポジトリ"]
+        subgraph PA["A層 — Claude ランタイム"]
+            CSK[".claude/skills/*（業務skill）"]
+            CSET[".claude/settings.json（PreToolUse egress）"]
+            CEG[".team-dev-kit/egress-scan.sh"]
+        end
         subgraph PBfw["B層 — framework (編集禁止)"]
             CFW[".team-dev-kit/contract.md<br/>.team-dev-kit/base.gitleaks.toml<br/>.githooks/pre-commit"]
         end
         subgraph PBcfg["B層 — config (プロジェクト所有)"]
             CCFG["AGENTS.md  @import→ contract.md<br/>.gitleaks.toml [extend]→ base<br/>.github/ISSUE_TEMPLATE/*, PR template"]
         end
-        LOCK[".team-dev-kit.lock<br/>version + framework hash + config 一覧"]
-        SETTINGS[".claude/settings.json<br/>marketplace + enabledPlugins"]
     end
 
-    MP -.->|/plugin install| SETTINGS
-    PA -.->|Claude Code にロード| CONSUMER
-    FW ==>|/kit-init 配置 ・ /kit-update 置換| CFW
-    CS ==>|/kit-init で1回だけ配置| CCFG
-    SC -->|hash 記録/照合| LOCK
-    CFW -.->|drift 検出| LOCK
-    CCFG -.->|install-once 判定| LOCK
-    CFW -->|/kit-contribute 差分| FW
+    BSH ==>|copy| CSK
+    BSH ==>|merge hook| CSET
+    BSH ==>|copy| CEG
+    BSH ==>|copy / --force 置換| CFW
+    BSH ==>|install-once + glue 注入| CCFG
+    CFW -->|改善は Issue/PR で還元| FW
 
     HUMAN["👤 人間"] -->|git commit| GATE1
     GATE1["L1: .githooks/pre-commit<br/>gitleaks protect --staged"] -->|clean| GITHIST["git 履歴"]
@@ -129,173 +132,86 @@ graph TB
     GATE3 -.->|秘密検出 exit2| BLOCK3["❌ 発行拒否"]
 ```
 
-## 5. 構成要素
+## 6. 構成要素
 
-ここでは A層・B層それぞれが何のファイルでできているかを、初めて読む人向けに役割つきで並べる。
-表だけ見て役割が分からない箇所には、表の下に補足を足してある。
+### 6.1 upstream（`plugins/team-dev-kit/` = 配布物の真実）
 
-### 5.1 A層 — plugin (`plugins/team-dev-kit/`)
-
-A層は Claude Code が読み込む plugin である。「Claude Code への指示書（skill）」「Claude Code が外部へ
-発行する前に走る検査（PreToolUse フック）」「B層のファイルを配置・更新するプログラム（同期エンジン）」
-「B層に配る元ファイル（原本）」の 4 種類でできている。
+bootstrap が読み取り、consumer へコピーする原本ツリー。
 
 | パス | 役割 |
 |------|------|
-| `.claude-plugin/plugin.json` | plugin のメタ情報（名前・version・skill ディレクトリ・hooks ファイルの場所） |
-| `skills/` | 11 個の skill。skill とは Claude Code への指示書で、実行コードは持たない |
-| `hooks/hooks.json` | PreToolUse フックの定義。Bash 実行の直前に `egress-scan.sh` を走らせる設定 |
-| `scripts/kit-sync.py` | B層を配置・更新する同期エンジン。`/kit-init` などの実体 |
-| `scripts/egress-scan.sh` | L3 ゲートの本体。`gh issue/pr create` の本文を gitleaks で検査 |
-| `framework/` | B層に配る共通ファイルの**原本**（プロジェクト側では編集禁止） |
-| `config-starters/` | B層に 1 回だけ置く雛形の**原本**（置いた後はプロジェクトが所有） |
+| `skills/` | 業務 skill（Claude Code への指示書。実行コードは持たない。条件発火） |
+| `scripts/egress-scan.sh` | L3 ゲート本体。`gh issue/pr create` の本文を gitleaks で検査 |
+| `framework/` | B層に配る共通ファイルの**原本**（consumer 側では編集禁止） |
+| `config-starters/` | B層に 1 回だけ置く雛形の**原本**（置いた後は consumer が所有） |
 
-skill は発火のしかたで 2 種類に分かれる。普段の開発で使うものは条件がそろうと自動で立ち上がり、
-kit 自体を操作するものは取り違えを防ぐため `/kit-*` と明示的に打ったときだけ立ち上がる。
+`bootstrap.sh`（リポジトリ直下）は導入/更新の唯一のエントリ。`skills/` を走査し `kit-*` を除外して配る
+（固定リストにすると skill 追加を取りこぼすため）。
 
-- 業務 skill（条件発火）: `git-commit`, `github-workflow`, `doc-writing`, `ticket-draft`,
-  `ticket-template`, `ticket-publish`, `ticket-pr-publish`
-- kit-* skill（`/kit-*` 明示発火のみ・誤爆防止）: `kit-init`, `kit-update`, `kit-contribute`, `kit-doctor`
+### 6.2 consumer 側に配置されるファイル
 
-### 5.2 B層 — プロジェクトのリポジトリに配置されるファイル
+| 配置先 | 層 | 由来 | 更新 |
+|--------|----|------|------|
+| `.claude/skills/*` | A | `skills/*` | 再実行（`--force` で置換） |
+| `.claude/settings.json`（PreToolUse） | A | bootstrap が生成/マージ | 冪等マージ |
+| `.team-dev-kit/egress-scan.sh` | A | `scripts/egress-scan.sh` | 再実行で置換 |
+| `.team-dev-kit/contract.md` | B/framework | `framework/contract.md` | `--force` 置換 |
+| `.team-dev-kit/base.gitleaks.toml` | B/framework | `framework/base.gitleaks.toml` | `--force` 置換 |
+| `.githooks/pre-commit` | B/framework | `framework/pre-commit`（+x） | `--force` 置換 |
+| `AGENTS.md` | B/config | `config-starters/AGENTS.md` | install-once（既存は glue 注入のみ） |
+| `.gitleaks.toml` | B/config | `config-starters/gitleaks.toml` | install-once（既存は glue 注入のみ） |
+| `.github/ISSUE_TEMPLATE/*`, `PULL_REQUEST_TEMPLATE.md` | B/config | `config-starters/github/*` | install-once |
 
-B層は同期エンジンがプロジェクトのリポジトリへ書き込み、`git commit` で履歴に残すファイル群である。
-全員で共有して触らない framework と、各プロジェクトが自由に書く config に分かれる（種別欄を参照）。
+> version 追跡（lockfile）は持たない。更新は「最新を取得して置換」で完結し、framework のローカル改変は
+> `--force` を付けない限り保持される（誤って消さないため）。
 
-| 配置先 | 種別 | 由来 | 更新 |
-|--------|------|------|------|
-| `.team-dev-kit/contract.md` | framework | `framework/contract.md` | 置換 |
-| `.team-dev-kit/base.gitleaks.toml` | framework | `framework/base.gitleaks.toml` | 置換 |
-| `.githooks/pre-commit` | framework | `framework/pre-commit`（+x） | 置換 |
-| `AGENTS.md` | config | `config-starters/AGENTS.md` | install-once |
-| `.gitleaks.toml` | config | `config-starters/gitleaks.toml` | install-once |
-| `.github/ISSUE_TEMPLATE/*`, `PULL_REQUEST_TEMPLATE.md` | config | `config-starters/github/*` | install-once |
-| `.team-dev-kit.lock` | provenance | `kit-sync.py` 生成 | init/update で更新 |
+## 7. データフロー
 
-### 5.3 lockfile (`.team-dev-kit.lock`)
-
-同期を正しく行うための来歴（provenance）記録。どのファイルをどの版で配ったかを覚えておくためのもので、
-プロジェクトのリポジトリ直下に commit する。
-
-```json
-{
-  "version": "0.1.0",
-  "marketplace": "aRaikoFunakami/team-dev-kit",
-  "framework": {
-    ".team-dev-kit/contract.md":        { "sha": "<sha256>" },
-    ".team-dev-kit/base.gitleaks.toml": { "sha": "<sha256>" },
-    ".githooks/pre-commit":             { "sha": "<sha256>" }
-  },
-  "config": ["AGENTS.md", ".gitleaks.toml", ".github/ISSUE_TEMPLATE/bug.md", "..."]
-}
-```
-
-- **framework hash** — ファイル内容から計算したハッシュ値を lock に記録しておき、現在のファイルから
-  再計算した値と突き合わせる。値が食い違えば、配った後に誰かが手で書き換えた（drift）と分かる
-- **config 一覧** — 既に置いた config を記録 → update 時は新規 starter のみ追加（install-once）
-- **version** — 配った kit が古くなっていないかを判定し、古ければ `/kit-update` を促す
-
-## 6. データフロー
-
-### 6.1 kit-init（初回導入）
+### 7.1 導入（初回 / 既存プロジェクト）
 
 ```mermaid
 sequenceDiagram
     actor U as ユーザー
-    participant S as kit-init skill
-    participant P as kit-sync.py init
+    participant BS as bootstrap.sh
+    participant K as kit upstream
     participant FS as プロジェクトのリポジトリ
-    participant G as git config
 
-    U->>S: /kit-init
-    S->>P: init --dry-run（プレビュー）
-    P-->>S: 配置予定（framework / config / hooksPath）
-    S->>P: init
-    loop framework 各ファイル
-        P->>FS: framework 原本を .team-dev-kit/ ・ .githooks/ へ書込（+x）
-        P->>P: ハッシュ値を計算して lock に記録
+    U->>BS: curl | sh （対象 repo のルートで）
+    BS->>K: shallow clone（--src でローカル可）
+    BS->>FS: A層 skill を .claude/skills/ へコピー
+    BS->>FS: PreToolUse egress フックを .claude/settings.json へ冪等マージ
+    BS->>FS: framework を .team-dev-kit/ ・ .githooks/ へ配置
+    alt config が未存在
+        BS->>FS: 雛形を配置
+    else config が既存
+        BS->>FS: 内容保持し glue（@import / [extend]）を冪等注入
     end
-    loop config-starters 各ファイル
-        alt 既存
-            P->>FS: スキップ（--force 時のみ上書き）
-        else 新規
-            P->>FS: 雛形を配置
-            P->>P: lock の config 一覧に追加
-        end
-    end
-    P->>G: core.hooksPath = .githooks（未設定時）
-    P->>FS: .team-dev-kit.lock 書込
-    S->>P: doctor（検証）
-    P-->>U: ✅ healthy
+    BS->>FS: git config core.hooksPath .githooks（未設定時）
     U->>FS: feature ブランチで commit → PR → merge
 ```
 
-### 6.2 kit-update（framework 更新）
+### 7.2 更新（framework / skill）
 
 ```mermaid
 sequenceDiagram
     actor U as ユーザー
-    participant PL as /plugin update
-    participant S as kit-update skill
-    participant P as kit-sync.py update
+    participant BS as bootstrap.sh
     participant FS as プロジェクトのリポジトリ
 
-    U->>PL: /plugin update（A層を新版へ）
-    U->>S: /kit-update
-    S->>P: update --dry-run
-    P-->>S: 旧→新 version、置換/drift-skip 予定
-    S->>P: update
-    loop framework 各ファイル
-        alt 現 SHA == lock SHA（drift なし）
-            P->>FS: 新版で置換
-            P->>P: lock SHA 更新
-        else 現 SHA != lock SHA（drift）
-            P-->>U: ⚠ drift skip（要判断）
-        end
-    end
-    loop config-starters
-        alt lock に未記録（新 starter）
-            P->>FS: 追加
-        else 既存
-            P->>FS: 触らない（install-once）
-        end
-    end
-    P->>FS: lock の version / SHA 更新
-    alt drift あり
-        U->>U: 還元(/kit-contribute) か 破棄(--force) を選択
-    end
-    U->>FS: commit → PR → merge
+    U->>BS: curl | sh -s -- --force
+    BS->>FS: skill / framework / egress を最新版で置換
+    BS->>FS: config は install-once（既存は温存・glue は維持）
+    U->>FS: 差分を feature ブランチで PR
 ```
 
-### 6.3 kit-contribute（現場改善の還元）
+`--force` を付けなければ既存 framework は温存（ローカル改変保護）。最新化したいときだけ `--force`。
 
-framework のローカル改善のみ upstream へ。config は還元対象外。
+### 7.3 還元（現場改善の upstream 反映）
 
-```mermaid
-sequenceDiagram
-    actor U as ユーザー
-    participant S as kit-contribute skill
-    participant P as kit-sync.py contribute
-    participant ST as staging (/tmp)
-    participant K as kit リポジトリ (fork)
+framework のローカル改善は **本体リポジトリへ Issue / PR** で還元する（config はプロジェクト固有のため対象外）。
+マージ後、各プロジェクトが bootstrap を再実行すれば改善が伝播する。
 
-    U->>S: /kit-contribute
-    S->>P: contribute（候補抽出）
-    loop framework 各ファイル
-        alt 現 SHA != lock SHA
-            P-->>U: unified diff 表示（先頭 40 行）
-        end
-    end
-    U->>S: 還元する候補を選択
-    S->>P: contribute --staging /tmp/... --apply
-    P->>ST: 承認分を framework/ レイアウトで書出
-    U->>K: fork & ブランチ作成
-    U->>K: staging → plugins/team-dev-kit/framework/ へコピー
-    U->>K: draft PR（version bump はメンテナが実施）
-    Note over K: merge + version bump 後、<br/>全プロジェクトが /plugin update → /kit-update で伝播
-```
-
-### 6.4 秘密情報スキャン 2 ゲート (L1 / L3)
+### 7.4 秘密情報スキャン 2 ゲート (L1 / L3)
 
 検出ルールは両ゲートとも gitleaks + `.gitleaks.toml`（`base.gitleaks.toml` を extend）で共通。
 
@@ -317,52 +233,47 @@ flowchart LR
 **L3 が必要な理由**: ドラフト置き場 `.issue_drafts/` は git-ignore（履歴に乗らない）ため L1 では見えない。
 `gh` 発行は L3 が唯一のゲート。パース失敗時は fail-closed（exit 2）で漏洩を防ぐ。
 
-## 7. ライフサイクル一覧
+## 8. ライフサイクル一覧
 
 | フェーズ | A層 | B層 | ゲート |
 |---------|---------|---------|--------|
-| 導入 | `.claude/settings.json` に marketplace+plugin を commit → clone で自動有効 | `/kit-init` で配置 + lock | PR |
+| 導入 | bootstrap が `.claude/skills/` + egress フックを配置 | bootstrap が framework/config を配置 + `core.hooksPath` | PR |
 | 運用 | skill 自動発火・egress フック | git pre-commit が秘密情報を止める | PR テンプレ |
-| 更新 | `/plugin update` | `/kit-update`（framework を置換・config は不可侵） | PR |
-| 還元 | — | `/kit-contribute`（差分検出 → kit へ PR） | PR |
+| 更新 | bootstrap 再実行（`--force` で置換） | framework は `--force` 置換・config は不可侵 | PR |
+| 還元 | — | framework 改善を本体へ Issue / PR | PR |
 
 更新も還元も **PR が唯一のレビュー境界**。プロジェクト間の直コピーは禁止。
 
-## 8. 技術スタック
+## 9. 技術スタック
 
 | 構成要素 | 言語 | 用途 |
 |---------------|------|------|
-| `kit-sync.py` | Python 3 | 同期エンジン（SHA / JSON / ファイル I/O / git subprocess） |
+| `bootstrap.sh` | Shell + Python 3 | 導入/更新エンジン（取得・配置・settings.json マージ・glue 注入） |
 | `egress-scan.sh` | Shell + Python 3 | L3 フック（JSON 入力解析・本文抽出・gitleaks 実行） |
 | `pre-commit` | Shell | L1 フック（`gitleaks protect --staged`） |
 | skill（`SKILL.md`） | Markdown | Claude Code への振る舞い指示（実行コードなし） |
-| `tests/smoke.sh` | Shell | 全ライフサイクルの E2E（29 アサーション） |
-| 設定/テンプレ | TOML / JSON / Markdown / YAML | `.gitleaks.toml`, `plugin.json`, `hooks.json`, 各テンプレ |
+| `tests/smoke.sh` | Shell | bootstrap の全ライフサイクル E2E |
+| 設定/テンプレ | TOML / JSON / Markdown / YAML | `.gitleaks.toml`, `settings.json`, 各テンプレ |
 
 **外部依存**: `gitleaks`（秘密/個人情報スキャン）, `git`, `python3`, `gh`（Issue/PR 発行）
 
-## 9. 主要ロジックのファイル参照
+## 10. 主要ロジックのファイル参照
 
 | ロジック | ファイル | 概要 |
 |---------|---------|------|
-| framework/config マッピング | `plugins/team-dev-kit/scripts/kit-sync.py` `fw_map()` / `cfg_map()` | 原本→配置先の対応表 |
-| init | `kit-sync.py` `cmd_init()` | 配置・lock 生成・hooksPath 設定 |
-| update | `kit-sync.py` `cmd_update()` | SHA 照合による drift 検出・置換・config install-once |
-| contribute | `kit-sync.py` `cmd_contribute()` | drift 候補抽出・diff 表示・staging 書出 |
-| doctor | `kit-sync.py` `cmd_doctor()` | 依存・hooksPath・version・drift・config の読取専用診断 |
+| 導入/更新 | `bootstrap.sh` | 取得・配置・settings.json マージ・core.hooksPath 設定 |
+| skill 配布（kit-* 除外） | `bootstrap.sh`（`SKILLS` 走査ループ） | `skills/*` を走査し `kit-*` を除外して配置 |
+| config への glue 注入 | `bootstrap.sh`（`ensure_glue`） | 既存 `AGENTS.md`/`.gitleaks.toml` に `@import`/`[extend]` を冪等注入 |
+| settings.json マージ | `bootstrap.sh`（PreToolUse マージ） | 壊れた JSON は fail-safe で追記スキップ |
 | L3 発行ゲート | `plugins/team-dev-kit/scripts/egress-scan.sh` | `gh ... create` の本文を gitleaks にかける |
 | L1 commit ゲート | `plugins/team-dev-kit/framework/pre-commit` | `gitleaks protect --staged` |
 | base 検出ルール | `plugins/team-dev-kit/framework/base.gitleaks.toml` | 秘密＋個人情報ルール（L1/L3 の源） |
 | `@import` glue | `plugins/team-dev-kit/config-starters/AGENTS.md` | `@.team-dev-kit/contract.md` |
 | `[extend]` glue | `plugins/team-dev-kit/config-starters/gitleaks.toml` | `path = ".team-dev-kit/base.gitleaks.toml"` |
-| PreToolUse 定義 | `plugins/team-dev-kit/hooks/hooks.json` | Bash matcher → egress-scan.sh |
-| marketplace メタ | `.claude-plugin/marketplace.json` | 本リポジトリを marketplace 宣言 |
-| E2E テスト | `tests/smoke.sh` | init→doctor→継承→egress block→update→contribute |
+| E2E テスト | `tests/smoke.sh` | 導入→glue→L1/L3→冪等→--force→既存 config 注入→fail-safe→--global |
 
-## 10. ステータス
+## 11. ステータス
 
-M0〜M5 実装済（plugin・lockfile・kit-init/update/contribute/doctor、framework/config 分離、`@import`、
-gitleaks overlay→base、3-way merge 撤去）。検証は `sh tests/smoke.sh`（29 アサーション全通過）。
-残: marketplace 公開（rollout 判断）、Claude Code 上での `/plugin` 実機確認。
-</content>
-</invoke>
+bootstrap 一本化済（plugin marketplace / kit-* skill / kit-sync.py は撤去）。
+framework/config 分離・`@import`・gitleaks overlay→base 継承・既存 config への glue 冪等注入を実装。
+検証は `sh tests/smoke.sh`（全アサーション通過）。
