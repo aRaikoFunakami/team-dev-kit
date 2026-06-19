@@ -1,96 +1,114 @@
 #!/bin/sh
-# 概要: team-dev-kit(v2: framework/config 分離)のスモークテスト。manifest・egress フック・
-#       kit-sync の init/doctor/update/contribute を scratch リポジトリで一気通貫に検証する。
-#       framework=置換管理・config=install-once・gitleaks overlay→base 継承・@import 連鎖を確認。
-#       real リポジトリは汚さない(update テストは kit を複製して version を上げる)。
+# 概要: team-dev-kit スモークテスト。唯一の導線である bootstrap.sh を scratch リポジトリで一気通貫に検証する。
+#       プロジェクトローカル導入・glue 注入(@import / [extend])・秘密ガード L1(pre-commit)/L3(egress)・
+#       冪等性・--force・--global・既存 config への非破壊注入・settings.json fail-safe を確認する。
+#       real リポジトリは汚さない(すべて mktemp の scratch で実行)。
 # 使い方: sh tests/smoke.sh   (kit リポジトリのルートから)。全合格で 0、失敗で 1。
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-PLUGIN="$ROOT/plugins/team-dev-kit"
-SYNC="$PLUGIN/scripts/kit-sync.py"
-EG="$PLUGIN/scripts/egress-scan.sh"
+BS="$ROOT/bootstrap.sh"
 FIX="$ROOT/tests/fixtures"
 pass=0; fail=0
 ok() { pass=$((pass+1)); printf '  ok   %s\n' "$1"; }
 ng() { fail=$((fail+1)); printf '  NG   %s\n' "$1"; }
 chk() { if eval "$2"; then ok "$1"; else ng "$1"; fi; }
 
-echo "== 1. manifest JSON 妥当性 =="
-for f in "$ROOT/.claude-plugin/marketplace.json" "$PLUGIN/.claude-plugin/plugin.json" "$PLUGIN/hooks/hooks.json"; do
-  chk "valid: ${f#$ROOT/}" "python3 -c 'import json,sys;json.load(open(sys.argv[1]))' '$f' >/dev/null 2>&1"
-done
+# scratch git repo を作る
+newrepo() { d=$(mktemp -d); (cd "$d" && git init -q && git config user.email t@t && git config user.name t); echo "$d"; }
+# bootstrap をローカルソース(ROOT)から対象 repo に対して実行
+run_bs() { ( cd "$1"; shift; sh "$BS" --src "$ROOT" "$@" ); }
 
-echo "== 2. init (fresh) =="
-T=$(mktemp -d); mkdir -p "$T/f"; (cd "$T/f" && git init -q)
-python3 "$SYNC" init --target "$T/f" >/dev/null
-hp=$(git -C "$T/f" config --local core.hooksPath || true)
-chk "framework: contract.md"      "[ -f '$T/f/.team-dev-kit/contract.md' ]"
-chk "framework: base.gitleaks"    "[ -f '$T/f/.team-dev-kit/base.gitleaks.toml' ]"
-chk "framework: pre-commit(+x)"   "[ -x '$T/f/.githooks/pre-commit' ]"
-chk "config: AGENTS.md"           "[ -f '$T/f/AGENTS.md' ]"
-chk "config: .gitleaks.toml"      "[ -f '$T/f/.gitleaks.toml' ]"
-chk "config: .github テンプレ"    "[ -f '$T/f/.github/PULL_REQUEST_TEMPLATE.md' ]"
-chk "lock 生成"                   "[ -f '$T/f/.team-dev-kit.lock' ]"
-chk "hooksPath=.githooks"         "[ '$hp' = .githooks ]"
-chk "@import 連鎖(AGENTS→contract)" "grep -q '@.team-dev-kit/contract.md' '$T/f/AGENTS.md'"
-chk "overlay extends base"        "grep -q '.team-dev-kit/base.gitleaks.toml' '$T/f/.gitleaks.toml'"
+echo "== 0. bootstrap 構文 =="
+chk "sh -n bootstrap.sh"        "sh -n '$BS'"
+chk "bootstrap.sh は実行可能"   "[ -x '$BS' ]"
 
-echo "== 3. doctor (clean) =="
-chk "doctor exit0" "python3 '$SYNC' doctor --target '$T/f' >/dev/null"
+echo "== 1. fresh 導入(project-local) =="
+T=$(newrepo)
+run_bs "$T" >/dev/null
+hp=$(git -C "$T" config --local core.hooksPath || true)
+chk "skill: git-commit"            "[ -f '$T/.claude/skills/git-commit/SKILL.md' ]"
+chk "skill: 7個(業務のみ)"          "[ \$(ls '$T/.claude/skills' | wc -l) -eq 7 ]"
+chk "kit-* skill は配られない"      "[ -z \"\$(ls '$T/.claude/skills' | grep '^kit-' || true)\" ]"
+chk "egress: .team-dev-kit/egress-scan.sh(+x)" "[ -x '$T/.team-dev-kit/egress-scan.sh' ]"
+chk "settings.json に PreToolUse"  "grep -q 'egress-scan.sh' '$T/.claude/settings.json'"
+chk "framework: contract.md"       "[ -f '$T/.team-dev-kit/contract.md' ]"
+chk "framework: base.gitleaks"     "[ -f '$T/.team-dev-kit/base.gitleaks.toml' ]"
+chk "framework: pre-commit(+x)"    "[ -x '$T/.githooks/pre-commit' ]"
+chk "config: AGENTS.md"            "[ -f '$T/AGENTS.md' ]"
+chk "config: .gitleaks.toml"       "[ -f '$T/.gitleaks.toml' ]"
+chk "config: .github テンプレ"     "[ -f '$T/.github/PULL_REQUEST_TEMPLATE.md' ]"
+chk "hooksPath=.githooks"          "[ '$hp' = .githooks ]"
+chk "@import 連鎖(AGENTS→contract)" "grep -q '@.team-dev-kit/contract.md' '$T/AGENTS.md'"
+chk "overlay extends base"         "grep -q '.team-dev-kit/base.gitleaks.toml' '$T/.gitleaks.toml'"
 
-echo "== 4. gitleaks overlay -> base 継承 =="
-S=$(mktemp -d); cp "$FIX/gitleaks-sample.txt" "$S/x.txt"   # 検体: base 検出される私的IP + base allowlist 済の例示IP
-n_leak=0
-( cd "$T/f" && gitleaks detect --no-git --source "$S" --no-banner --redact -c "$T/f/.gitleaks.toml" ) >/dev/null 2>&1 || n_leak=$?
-chk "base ルール継承で 1 件検出(exit1)" "[ '$n_leak' = 1 ]"
+echo "== 2. L1 pre-commit(base 継承で秘密を block) =="
+cp "$FIX/gitleaks-sample.txt" "$T/leak.txt"
+git -C "$T" add leak.txt
+before=$(git -C "$T" rev-list --count HEAD 2>/dev/null || echo 0)
+rc=0; git -C "$T" commit -q -m "leak" >/dev/null 2>&1 || rc=$?
+after=$(git -C "$T" rev-list --count HEAD 2>/dev/null || echo 0)
+chk "commit が pre-commit で停止"  "[ '$rc' != 0 ] && [ '$before' = '$after' ]"
+git -C "$T" reset -q HEAD leak.txt 2>/dev/null || true; rm -f "$T/leak.txt"
 
-echo "== 5. egress フック(overlay 経由) =="
-egress() { rc=0; CLAUDE_PROJECT_DIR="$T/f" sh "$EG" <"$1" >/dev/null 2>&1 || rc=$?; echo "$rc"; }
-rc_pii=$(egress "$FIX/egress-pii.json"); rc_clean=$(egress "$FIX/egress-clean.json"); rc_skip=$(egress "$FIX/egress-skip.json")
-chk "PII を block(exit2)"   "[ $rc_pii = 2 ]"
-chk "clean を素通り(exit0)" "[ $rc_clean = 0 ]"
-chk "非gh を素通り(exit0)"  "[ $rc_skip = 0 ]"
+echo "== 3. L3 egress(installed egress-scan.sh) =="
+egress() { rc=0; CLAUDE_PROJECT_DIR="$T" sh "$T/.team-dev-kit/egress-scan.sh" <"$1" >/dev/null 2>&1 || rc=$?; echo "$rc"; }
+chk "PII を block(exit2)"   "[ \$(egress '$FIX/egress-pii.json') = 2 ]"
+chk "clean を素通り(exit0)" "[ \$(egress '$FIX/egress-clean.json') = 0 ]"
+chk "非gh を素通り(exit0)"  "[ \$(egress '$FIX/egress-skip.json') = 0 ]"
 
-echo "== 6. config install-once(再 init で非 clobber) =="
-printf '\n## 固有追記\n' >> "$T/f/AGENTS.md"
-python3 "$SYNC" init --target "$T/f" >/dev/null
-chk "AGENTS.md のローカル追記を保持" "grep -q '固有追記' '$T/f/AGENTS.md'"
+echo "== 4. 冪等性(再実行で skip/keep・重複なし) =="
+out=$(run_bs "$T" 2>&1)
+chk "skill は skip"               "printf '%s' \"\$out\" | grep -q 'skip (exists): git-commit'"
+chk "glue は keep(重複注入なし)"   "printf '%s' \"\$out\" | grep -q 'keep (glue present)'"
+chk "@import は1回だけ"           "[ \$(grep -c '@.team-dev-kit/contract.md' '$T/AGENTS.md') -eq 1 ]"
+chk "[extend] は1回だけ"          "[ \$(grep -c '^\\[extend\\]' '$T/.gitleaks.toml') -eq 1 ]"
 
-echo "== 7. framework drift 検出 =="
-printf '\n# local edit\n' >> "$T/f/.team-dev-kit/contract.md"
-chk "doctor が framework DRIFTED 報告" "python3 '$SYNC' doctor --target '$T/f' | grep -q 'DRIFTED'"
+echo "== 5. --force(framework 置換 / config 温存) =="
+printf '\n# LOCAL EDIT\n' >> "$T/.team-dev-kit/contract.md"   # framework をローカル改変
+printf '\n## 固有追記\n'   >> "$T/AGENTS.md"                  # config をローカル改変
+run_bs "$T" --force >/dev/null
+chk "framework は --force で置換(編集消える)" "! grep -q 'LOCAL EDIT' '$T/.team-dev-kit/contract.md'"
+chk "config は --force でも温存"              "grep -q '固有追記' '$T/AGENTS.md'"
 
-echo "== 8. update(framework 置換 / config 不可侵 / drift skip) =="
-KN=$(mktemp -d)/kit; cp -R "$ROOT" "$KN"; rm -rf "$KN/.git"
-python3 -c "import json;p='$KN/plugins/team-dev-kit/.claude-plugin/plugin.json';d=json.load(open(p));d['version']='0.4.0';json.dump(d,open(p,'w'))"
-printf '\n# v0.4.0 added contract line\n' >> "$KN/plugins/team-dev-kit/framework/contract.md"
-SK="$KN/plugins/team-dev-kit/scripts/kit-sync.py"
-# 8a: クリーン更新(framework 未編集)
-U=$(mktemp -d); mkdir -p "$U/c"; (cd "$U/c" && git init -q); python3 "$SYNC" init --target "$U/c" >/dev/null
-printf '\n## 固有\n' >> "$U/c/AGENTS.md"
-python3 "$SK" update --target "$U/c" >/dev/null 2>&1
-chk "framework 置換(新 contract 行)"  "grep -q 'v0.4.0 added contract line' '$U/c/.team-dev-kit/contract.md'"
-chk "config(AGENTS 固有節)を温存"     "grep -q '固有' '$U/c/AGENTS.md'"
-chk "lock が 0.4.0"                   "grep -q '0.4.0' '$U/c/.team-dev-kit.lock'"
-# 8b: framework をローカル編集 → update は drift skip(置換しない)
-U2=$(mktemp -d); mkdir -p "$U2/c"; (cd "$U2/c" && git init -q); python3 "$SYNC" init --target "$U2/c" >/dev/null
-printf '\n# my local change\n' >> "$U2/c/.team-dev-kit/contract.md"
-python3 "$SK" update --target "$U2/c" >/dev/null 2>&1
-chk "drift skip でローカル編集保持"   "grep -q 'my local change' '$U2/c/.team-dev-kit/contract.md'"
-chk "drift skip で kit 行は入らない"  "! grep -q 'v0.4.0 added contract line' '$U2/c/.team-dev-kit/contract.md'"
-# 8c: --force で破棄置換
-python3 "$SK" update --target "$U2/c" --force >/dev/null 2>&1
-chk "--force で kit 行に置換"         "grep -q 'v0.4.0 added contract line' '$U2/c/.team-dev-kit/contract.md'"
+echo "== 6. 既存の独自 config への glue 非破壊注入 =="
+E=$(newrepo)
+printf '# MyProject\n- tests first\n' > "$E/AGENTS.md"
+printf 'title = "mine"\n[[rules]]\nid="x"\nregex='"'''"'MYTOK-[0-9]+'"'''"'\n' > "$E/.gitleaks.toml"
+(cd "$E" && git add -A && git commit -q -m init)
+run_bs "$E" >/dev/null
+chk "AGENTS: ユーザ内容を保持"     "grep -q 'tests first' '$E/AGENTS.md'"
+chk "AGENTS: @import を注入"       "grep -q '@.team-dev-kit/contract.md' '$E/AGENTS.md'"
+chk "gitleaks: ユーザrule を保持"  "grep -q 'MYTOK' '$E/.gitleaks.toml'"
+chk "gitleaks: [extend] を注入"    "grep -q 'base.gitleaks.toml' '$E/.gitleaks.toml'"
+chk "gitleaks: TOML 妥当"          "python3 -c 'import tomllib;tomllib.load(open(\"$E/.gitleaks.toml\",\"rb\"))'"
+# 注入後に base 由来の秘密が実際に止まる
+cp "$FIX/gitleaks-sample.txt" "$E/leak.txt"; git -C "$E" add leak.txt
+rcb=0; git -C "$E" commit -q -m leak >/dev/null 2>&1 || rcb=$?
+chk "注入後 pre-commit が秘密を block" "[ '$rcb' != 0 ]"
+git -C "$E" reset -q HEAD leak.txt 2>/dev/null || true; rm -f "$E/leak.txt"
+# 既存の別 [extend] は自動編集せず警告
+X=$(newrepo)
+printf '[extend]\npath="./other.toml"\n' > "$X/.gitleaks.toml"
+(cd "$X" && git add -A && git commit -q -m i)
+xout=$(run_bs "$X" 2>&1)
+chk "別 [extend] は警告のみ"        "printf '%s' \"\$xout\" | grep -q '既存 \\[extend\\] あり'"
+chk "別 [extend] を二重化しない"    "[ \$(grep -c '^\\[extend\\]' '$X/.gitleaks.toml') -eq 1 ]"
 
-echo "== 9. contribute(framework のみ) =="
-C=$(mktemp -d); mkdir -p "$C/c"; (cd "$C/c" && git init -q); python3 "$SYNC" init --target "$C/c" >/dev/null
-chk "改変なし→候補なし" "python3 '$SYNC' contribute --target '$C/c' | grep -q '候補なし'"
-printf '\n# improve hook\n' >> "$C/c/.githooks/pre-commit"
-printf '\n## 固有(config は対象外)\n' >> "$C/c/AGENTS.md"
-ST=$(mktemp -d)
-python3 "$SYNC" contribute --target "$C/c" --staging "$ST" --apply >/dev/null
-chk "framework 改善を staging(framework/)" "grep -q 'improve hook' '$ST/framework/pre-commit'"
-chk "config(AGENTS)は還元対象外"           "[ ! -f '$ST/config-starters/AGENTS.md' ] && [ ! -f '$ST/AGENTS.md' ]"
+echo "== 7. settings.json fail-safe(壊れていても完走) =="
+B=$(newrepo); mkdir -p "$B/.claude"; printf '{bad json' > "$B/.claude/settings.json"
+rc=0; bout=$(run_bs "$B" 2>&1) || rc=$?
+chk "壊れた settings でも exit0 完走" "[ '$rc' = 0 ]"
+chk "完了バナーに到達"               "printf '%s' \"\$bout\" | grep -q 'bootstrap 完了'"
+chk "解析不能を警告しスキップ"       "printf '%s' \"\$bout\" | grep -q '解析できません'"
+chk "壊れた settings を上書きしない"  "grep -q '{bad json' '$B/.claude/settings.json'"
+chk "guardrails は配置される"        "[ -x '$B/.githooks/pre-commit' ]"
+
+echo "== 8. --global(skill は \$HOME 配下・B層は repo) =="
+FH=$(mktemp -d); G=$(newrepo)
+HOME="$FH" run_bs "$G" --global >/dev/null
+chk "global: skill は \$HOME/.claude/skills" "[ -f '$FH/.claude/skills/git-commit/SKILL.md' ]"
+chk "global: egress も \$HOME 配下"          "[ -x '$FH/.claude/team-dev-kit/egress-scan.sh' ]"
+chk "global: B層(pre-commit)は repo 配下"    "[ -x '$G/.githooks/pre-commit' ]"
 
 echo ""
 echo "== 結果: pass=$pass fail=$fail =="
