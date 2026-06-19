@@ -1,13 +1,18 @@
 #!/bin/sh
-# 概要: Claude Code PreToolUse フック(L3)。Bash で `gh issue create` / `gh pr create` を実行する直前に、
-#       実際にアップロードされる本文だけ（--title / --body の値、--body-file の中身）を gitleaks で走査し、
-#       秘密情報・個人情報を含む場合は exit 2 で実行を拒否する。
+# 概要: Claude Code PreToolUse フック(L3)。Bash で本文をリモートへアップロードする gh コマンド
+#       （issue/pr の create|edit|comment、release の create|edit、gist create）を実行する直前に、
+#       アップロードされる本文だけ（--title/--body/--notes の値、--body-file/--notes-file の中身、
+#       gist の対象ファイル内容）を gitleaks で走査し、秘密情報・個人情報を含む場合は exit 2 で拒否する。
 #       gitignore された下書きは git 履歴を通らず pre-commit(L1) では捕捉できないため、この経路を塞ぐ唯一の層。
 # 設計: docs/secret-scan.md。設定は .gitleaks.toml を共有する。
+# fail-closed 原則: 秘密情報の egress を止める層は判定不能なら止める。入力 JSON の parse 失敗・
+#       想定外スキーマ（tool_name/tool_input 欠落）・コマンド行の parse 失敗は、走査対象を特定できない以上
+#       素通りさせず DENY(exit 2) に倒す。Bash 以外/対象 gh 以外と確実に判定できた場合だけ SKIP する。
 # 注意: コマンド行全体は走査しない。cwd や --body-file の絶対パスにはローカルのホームパス
 #       （実ユーザー名）が当然含まれるが、それらはアップロードされないため対象外にする（誤検知回避）。
-#       --body 系の指定が無い gh create（テンプレ/コミットから本文生成）は本文を特定できず素通りする。
-#       その経路のコミット内容は L1(pre-commit) が守る。
+#       --body 系の指定が無い gh create（テンプレ/コミットから本文生成）や対話エディタ・gist stdin は
+#       本文がコマンド引数に乗らず特定できないため素通りする。その経路のコミット内容は L1(pre-commit) が守る。
+#       `gh api` の変更系（POST/PATCH/PUT/DELETE やフィールド付与）は本文を確実に抽出できないため DENY に倒す。
 set -eu
 
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
@@ -26,28 +31,66 @@ decision="$(python3 - "$scandir" "$input_json" <<'PY'
 import sys, os, json, re, shlex
 
 scandir = sys.argv[1]
+# 入力 JSON の parse 失敗は走査対象を特定できない＝判定不能。素通りさせず fail-closed に倒す。
 try:
     with open(sys.argv[2], encoding="utf-8") as f:
         d = json.load(f)
 except Exception:
+    print("DENY"); sys.exit(0)
+
+# 想定外スキーマ（tool_name キー欠落）も判定不能 → fail-closed。
+# Bash 以外と「確実に」判定できた場合だけ SKIP する。
+if not isinstance(d, dict) or "tool_name" not in d:
+    print("DENY"); sys.exit(0)
+if d["tool_name"] != "Bash":
     print("SKIP"); sys.exit(0)
 
-if d.get("tool_name") != "Bash":
+# Bash と確定したのに tool_input が無い/壊れているのも判定不能 → fail-closed。
+ti = d.get("tool_input")
+if not isinstance(ti, dict):
+    print("DENY"); sys.exit(0)
+cmd = ti.get("command", "")
+
+# 本文をリモートへアップロードする gh サブコマンドを対象にする（create だけでなく edit/comment 等も）。
+if not re.search(r"\bgh\b", cmd):
+    print("SKIP"); sys.exit(0)
+is_issue_pr = re.search(r"\bgh\b.*\b(issue|pr)\b.*\b(create|edit|comment)\b", cmd)
+is_release  = re.search(r"\bgh\b.*\brelease\b.*\b(create|edit)\b", cmd)
+is_gist     = re.search(r"\bgh\b.*\bgist\b.*\bcreate\b", cmd)
+is_api      = re.search(r"\bgh\b.*\bapi\b", cmd)
+if not (is_issue_pr or is_release or is_gist or is_api):
     print("SKIP"); sys.exit(0)
 
-cmd = d.get("tool_input", {}).get("command", "")
-# gh issue create / gh pr create のみ対象
-if not re.search(r"\bgh\b.*\b(issue|pr)\b.*\bcreate\b", cmd):
-    print("SKIP"); sys.exit(0)
-
-# gh create と判定した後で解析に失敗したら、本文を取りこぼして素通りさせない（fail-closed）。
+# 対象 gh と判定した後で解析に失敗したら、本文を取りこぼして素通りさせない（fail-closed）。
 # crude な split にフォールバックすると --body の値を落として走査漏れ＝流出につながるため拒否する。
 try:
     toks = shlex.split(cmd)
 except Exception:
     print("DENY"); sys.exit(0)
 
+# gh api は本文がフィールド(-f/-F/--field/--input)や独自スキーマに散らばり、確実な抽出が難しい。
+# 変更系（POST/PATCH/PUT/DELETE、またはフィールド付与）は走査漏れを避けて fail-closed に倒す。
+# 読み取り(GET)はアップロードが無いため SKIP。
+if is_api and not (is_issue_pr or is_release or is_gist):
+    mutating = False
+    j = 0
+    while j < len(toks):
+        t = toks[j]
+        if t in ("-X", "--method"):
+            if j + 1 < len(toks) and toks[j + 1].upper() in ("POST", "PATCH", "PUT", "DELETE"):
+                mutating = True
+            j += 2; continue
+        if t.startswith("--method=") and t.split("=", 1)[1].upper() in ("POST", "PATCH", "PUT", "DELETE"):
+            mutating = True
+        if t in ("-f", "--raw-field", "-F", "--field", "--input"):
+            mutating = True
+        j += 1
+    print("DENY_API" if mutating else "SKIP"); sys.exit(0)
+
 pieces = []
+
+def add_text(s):
+    pieces.append(s)
 
 def add_file(path):
     if os.path.isfile(path):
@@ -56,20 +99,28 @@ def add_file(path):
         except Exception:
             pass
 
+# 値が本文になるフラグ（--title/--body/--notes）と、値がファイルパスのフラグ（--body-file/--notes-file）。
+# -F は issue/pr/release 系では --body-file。gh api(-F=--field) は上で分岐済みなのでここには来ない。
+TEXT_FLAGS = ("--title", "-t", "--body", "-b", "--notes", "-n")
+FILE_FLAGS = ("--body-file", "-F", "--notes-file")
 i = 0
 n = len(toks)
 while i < n:
     t = toks[i]
-    if t in ("--title", "-t", "--body", "-b"):
+    key = t.split("=", 1)[0]
+    if t in TEXT_FLAGS:
         if i + 1 < n:
-            pieces.append(toks[i + 1]); i += 2; continue
-    elif t.startswith("--title=") or t.startswith("--body="):
-        pieces.append(t.split("=", 1)[1])
-    elif t in ("--body-file", "-F"):
+            add_text(toks[i + 1]); i += 2; continue
+    elif "=" in t and key in TEXT_FLAGS:
+        add_text(t.split("=", 1)[1])
+    elif t in FILE_FLAGS:
         if i + 1 < n:
             add_file(toks[i + 1]); i += 2; continue
-    elif t.startswith("--body-file="):
+    elif "=" in t and key in FILE_FLAGS:
         add_file(t.split("=", 1)[1])
+    elif is_gist and not t.startswith("-"):
+        # gist create の本文は対象ファイルの中身（位置引数）。stdin("-")は捕捉できず素通り。
+        add_file(t)
     i += 1
 
 if not pieces:
@@ -82,8 +133,14 @@ PY
 )"
 
 if [ "$decision" = "DENY" ]; then
-  echo "✋ gh コマンドの本文を解析できませんでした（クォート不整合など）。安全側に倒して送信を拒否します。" >&2
+  echo "✋ アップロード対象を特定できませんでした（入力 JSON 不正、またはコマンドのクォート不整合など）。安全側に倒して送信を拒否します。" >&2
   echo "   コマンドを修正して再実行してください。" >&2
+  exit 2
+fi
+
+if [ "$decision" = "DENY_API" ]; then
+  echo "✋ gh api の変更系リクエスト（POST/PATCH/PUT/DELETE）はアップロード本文を確実に抽出できないため、安全側に倒して送信を拒否します。" >&2
+  echo "   秘密情報を含まないことを確認のうえ、必要なら gh issue/pr/release など本文を走査できる経路を使ってください。" >&2
   exit 2
 fi
 
