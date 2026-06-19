@@ -18,9 +18,14 @@ newrepo() { d=$(mktemp -d); (cd "$d" && git init -q && git config user.email t@t
 # bootstrap をローカルソース(ROOT)から対象 repo に対して実行
 run_bs() { ( cd "$1"; shift; sh "$BS" --src "$ROOT" "$@" ); }
 
-echo "== 0. bootstrap 構文 =="
+echo "== 0. bootstrap 構文 / 撤去物の不在 =="
 chk "sh -n bootstrap.sh"        "sh -n '$BS'"
 chk "bootstrap.sh は実行可能"   "[ -x '$BS' ]"
+chk "kit-sync.py は撤去済み"    "[ ! -e '$ROOT/plugins/team-dev-kit/scripts/kit-sync.py' ]"
+chk "plugin.json は撤去済み"    "[ ! -e '$ROOT/plugins/team-dev-kit/.claude-plugin/plugin.json' ]"
+chk "marketplace.json は撤去済み" "[ ! -e '$ROOT/.claude-plugin/marketplace.json' ]"
+chk "hooks/ は撤去済み"          "[ ! -e '$ROOT/plugins/team-dev-kit/hooks' ]"
+chk "kit-* skill は撤去済み"     "[ -z \"\$(ls '$ROOT/plugins/team-dev-kit/skills' | grep '^kit-' || true)\" ]"
 
 echo "== 1. fresh 導入(project-local) =="
 T=$(newrepo)
@@ -80,7 +85,12 @@ chk "AGENTS: ユーザ内容を保持"     "grep -q 'tests first' '$E/AGENTS.md'
 chk "AGENTS: @import を注入"       "grep -q '@.team-dev-kit/contract.md' '$E/AGENTS.md'"
 chk "gitleaks: ユーザrule を保持"  "grep -q 'MYTOK' '$E/.gitleaks.toml'"
 chk "gitleaks: [extend] を注入"    "grep -q 'base.gitleaks.toml' '$E/.gitleaks.toml'"
-chk "gitleaks: TOML 妥当"          "python3 -c 'import tomllib;tomllib.load(open(\"$E/.gitleaks.toml\",\"rb\"))'"
+# TOML 妥当性: tomllib は py3.11+。古い環境では gitleaks の設定ロードで代替する。
+if python3 -c 'import tomllib' 2>/dev/null; then
+  chk "gitleaks: TOML 妥当(tomllib)"   "python3 -c 'import tomllib;tomllib.load(open(\"$E/.gitleaks.toml\",\"rb\"))'"
+else
+  chk "gitleaks: 設定ロード可"          "gitleaks detect --no-git --source '$E/AGENTS.md' --no-banner -c '$E/.gitleaks.toml' >/dev/null 2>&1 || [ \$? -ne 2 ]"
+fi
 # 注入後に base 由来の秘密が実際に止まる
 cp "$FIX/gitleaks-sample.txt" "$E/leak.txt"; git -C "$E" add leak.txt
 rcb=0; git -C "$E" commit -q -m leak >/dev/null 2>&1 || rcb=$?

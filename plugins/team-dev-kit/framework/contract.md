@@ -1,7 +1,7 @@
 # チーム開発の契約（team-dev-kit 管理）
 
 このファイルは team-dev-kit が配布・更新する **共通契約**。プロジェクトは編集しない
-（編集しても `/kit-update` で置換される。改善は `/kit-contribute` で上流へ）。
+（編集しても bootstrap 再実行で置換される。改善は本体リポジトリへ Issue / PR で還元する）。
 プロジェクト固有の規約は、このファイルを取り込む `AGENTS.md` 側に書く。
 
 ## 1. 常時守る契約（最重要）
@@ -20,7 +20,8 @@
 | **github-workflow** | GitHub を操作するとき（条件発火） |
 | **doc-writing** | 設計ドキュメント・技術文書を作成・更新するとき（条件発火） |
 | **ticket-template / draft / publish / pr-publish** | チケット下書きの作成・発行・PR 化（条件発火） |
-| **kit-init / update / contribute / doctor** | kit のライフサイクル操作（`/kit-*` 明示発火のみ） |
+
+> 導入・更新は `bootstrap.sh`（curl 再実行）で行う。skill は `.claude/skills/` に配置され自動で読まれる。
 
 ## 3. 秘密情報・個人情報スキャン
 
