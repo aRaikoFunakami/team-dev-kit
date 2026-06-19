@@ -4,10 +4,10 @@
 > いまはこのガイドを `ticket-*` skill 群が保持し、会話や開発計画から下書きを
 > 自動生成・発行します。人がテンプレを探してコピペする必要はありません。
 > 現役の挙動:
-> [`ticket-template`](../../plugins/team-dev-kit/skills/ticket-template/SKILL.md)（手書き足場）/
-> [`ticket-draft`](../../plugins/team-dev-kit/skills/ticket-draft/SKILL.md)（AI 生成）/
-> [`ticket-publish`](../../plugins/team-dev-kit/skills/ticket-publish/SKILL.md)（Issue 発行）/
-> [`ticket-pr-publish`](../../plugins/team-dev-kit/skills/ticket-pr-publish/SKILL.md)（PR 発行）。
+> [`ticket-template`](../../kit/skills/ticket-template/SKILL.md)（手書き足場）/
+> [`ticket-draft`](../../kit/skills/ticket-draft/SKILL.md)（AI 生成）/
+> [`ticket-publish`](../../kit/skills/ticket-publish/SKILL.md)（Issue 発行）/
+> [`ticket-pr-publish`](../../kit/skills/ticket-pr-publish/SKILL.md)（PR 発行）。
 
 ---
 

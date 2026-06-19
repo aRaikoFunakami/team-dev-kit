@@ -94,7 +94,7 @@ graph LR
 graph TB
     subgraph KIT["team-dev-kit リポジトリ (upstream)"]
         BSH["bootstrap.sh（唯一の導線）"]
-        subgraph SRC["plugins/team-dev-kit/ (配布物の真実)"]
+        subgraph SRC["kit/ (配布物の真実)"]
             SK["skills/<br/>業務skill: git-commit, github-workflow,<br/>doc-writing, ticket-*"]
             SC["scripts/egress-scan.sh（L3 ゲート本体）"]
             FW["framework/ (原本・共通)<br/>contract.md / base.gitleaks.toml / pre-commit"]
@@ -134,7 +134,7 @@ graph TB
 
 ## 6. 構成要素
 
-### 6.1 upstream（`plugins/team-dev-kit/` = 配布物の真実）
+### 6.1 upstream（`kit/` = 配布物の真実）
 
 bootstrap が読み取り、consumer へコピーする原本ツリー。
 
@@ -265,11 +265,11 @@ flowchart LR
 | skill 配布（kit-* 除外） | `bootstrap.sh`（`SKILLS` 走査ループ） | `skills/*` を走査し `kit-*` を除外して配置 |
 | config への glue 注入 | `bootstrap.sh`（`ensure_glue`） | 既存 `AGENTS.md`/`.gitleaks.toml` に `@import`/`[extend]` を冪等注入 |
 | settings.json マージ | `bootstrap.sh`（PreToolUse マージ） | 壊れた JSON は fail-safe で追記スキップ |
-| L3 発行ゲート | `plugins/team-dev-kit/scripts/egress-scan.sh` | `gh ... create` の本文を gitleaks にかける |
-| L1 commit ゲート | `plugins/team-dev-kit/framework/pre-commit` | `gitleaks protect --staged` |
-| base 検出ルール | `plugins/team-dev-kit/framework/base.gitleaks.toml` | 秘密＋個人情報ルール（L1/L3 の源） |
-| `@import` glue | `plugins/team-dev-kit/config-starters/AGENTS.md` | `@.team-dev-kit/contract.md` |
-| `[extend]` glue | `plugins/team-dev-kit/config-starters/gitleaks.toml` | `path = ".team-dev-kit/base.gitleaks.toml"` |
+| L3 発行ゲート | `kit/scripts/egress-scan.sh` | `gh ... create` の本文を gitleaks にかける |
+| L1 commit ゲート | `kit/framework/pre-commit` | `gitleaks protect --staged` |
+| base 検出ルール | `kit/framework/base.gitleaks.toml` | 秘密＋個人情報ルール（L1/L3 の源） |
+| `@import` glue | `kit/config-starters/AGENTS.md` | `@.team-dev-kit/contract.md` |
+| `[extend]` glue | `kit/config-starters/gitleaks.toml` | `path = ".team-dev-kit/base.gitleaks.toml"` |
 | E2E テスト | `tests/smoke.sh` | 導入→glue→L1/L3→冪等→--force→既存 config 注入→fail-safe→--global |
 
 ## 11. ステータス

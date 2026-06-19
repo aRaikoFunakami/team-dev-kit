@@ -3,7 +3,7 @@
 > 🕰️ **これは team-dev-kit 導入前のサンプルです。**
 > いまはこの運用契約を `github-workflow` skill が保持し、「取りかかって」「PR 出して」と
 > 言うだけでブランチ作成・Issue/PR 紐付け・直 push 禁止が自動で守られます。
-> 現役の挙動は [`plugins/team-dev-kit/skills/github-workflow/SKILL.md`](../../plugins/team-dev-kit/skills/github-workflow/SKILL.md) を参照。
+> 現役の挙動は [`kit/skills/github-workflow/SKILL.md`](../../kit/skills/github-workflow/SKILL.md) を参照。
 >
 > 現場ではこのドキュメントを「ブランチ運用」と「Issue/PR 運用」の 2 本に
 > 分けて持っていたチームも多いはずです。

@@ -4,7 +4,7 @@
 title = "team-dev-kit repo scan (overlay)"
 
 [extend]
-path = "plugins/team-dev-kit/framework/base.gitleaks.toml"
+path = "kit/framework/base.gitleaks.toml"
 
 [allowlist]
 description = "team-dev-kit repo 固有の許可"

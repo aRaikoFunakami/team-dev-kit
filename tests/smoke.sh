@@ -21,11 +21,11 @@ run_bs() { ( cd "$1"; shift; sh "$BS" --src "$ROOT" "$@" ); }
 echo "== 0. bootstrap 構文 / 撤去物の不在 =="
 chk "sh -n bootstrap.sh"        "sh -n '$BS'"
 chk "bootstrap.sh は実行可能"   "[ -x '$BS' ]"
-chk "kit-sync.py は撤去済み"    "[ ! -e '$ROOT/plugins/team-dev-kit/scripts/kit-sync.py' ]"
-chk "plugin.json は撤去済み"    "[ ! -e '$ROOT/plugins/team-dev-kit/.claude-plugin/plugin.json' ]"
+chk "kit-sync.py は撤去済み"    "[ ! -e '$ROOT/kit/scripts/kit-sync.py' ]"
+chk "plugin.json は撤去済み"    "[ ! -e '$ROOT/kit/.claude-plugin/plugin.json' ]"
 chk "marketplace.json は撤去済み" "[ ! -e '$ROOT/.claude-plugin/marketplace.json' ]"
-chk "hooks/ は撤去済み"          "[ ! -e '$ROOT/plugins/team-dev-kit/hooks' ]"
-chk "kit-* skill は撤去済み"     "[ -z \"\$(ls '$ROOT/plugins/team-dev-kit/skills' | grep '^kit-' || true)\" ]"
+chk "hooks/ は撤去済み"          "[ ! -e '$ROOT/kit/hooks' ]"
+chk "kit-* skill は撤去済み"     "[ -z \"\$(ls '$ROOT/kit/skills' | grep '^kit-' || true)\" ]"
 
 echo "== 1. fresh 導入(project-local) =="
 T=$(newrepo)
