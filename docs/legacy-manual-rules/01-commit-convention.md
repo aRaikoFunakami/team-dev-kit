@@ -3,7 +3,7 @@
 > 🕰️ **これは team-dev-kit 導入前のサンプルです。**
 > いまはこの規約を `git-commit` skill が保持し、「コミットして」と言うだけで
 > 自動的に正しい形を提案します。人が暗記する必要はありません。
-> 現役の挙動は [`plugins/team-dev-kit/skills/git-commit/SKILL.md`](../../plugins/team-dev-kit/skills/git-commit/SKILL.md) を参照。
+> 現役の挙動は [`kit/skills/git-commit/SKILL.md`](../../kit/skills/git-commit/SKILL.md) を参照。
 
 ---
 

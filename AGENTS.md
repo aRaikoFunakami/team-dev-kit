@@ -5,7 +5,7 @@ team-dev-kit リポジトリ自身の開発契約。kit は自分のルールを
 ## このリポジトリの構造
 
 - `bootstrap.sh` — **唯一の導入/更新導線**。consumer の repo で `curl | sh` し、skill・ガードレール・glue を配置する
-- `plugins/team-dev-kit/` — 配布物の真実（bootstrap が読むソースツリー）
+- `kit/` — 配布物の真実（bootstrap が読むソースツリー）
   - `skills/` — 業務 skill（条件発火）。consumer の `.claude/skills/` へコピーされる
   - `scripts/egress-scan.sh` — PreToolUse egress フック本体（consumer の `.team-dev-kit/` へコピー）
   - `framework/` — **B1: consumer に commit・編集禁止**。`contract.md`, `base.gitleaks.toml`, `pre-commit`。bootstrap 再実行（`--force`）が置換

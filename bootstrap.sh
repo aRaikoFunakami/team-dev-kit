@@ -49,11 +49,11 @@ act() { [ "$DRY" -eq 1 ] && printf '  [dry-run] %s\n' "$*" || printf '  %s\n' "$
 die() { printf '✋ %s\n' "$*" >&2; exit 1; }
 
 # --- 取得元の用意 -------------------------------------------------------------
-# SRC 未指定なら shallow clone して temp に取得。プラグイン本体は plugins/team-dev-kit/。
+# SRC 未指定なら shallow clone して temp に取得。配布ソースは kit/。
 CLEANUP=""
 if [ -n "$SRC" ]; then
-  [ -d "$SRC/plugins/team-dev-kit" ] || die "--src に plugins/team-dev-kit がありません: $SRC"
-  PLUGIN="$SRC/plugins/team-dev-kit"
+  [ -d "$SRC/kit" ] || die "--src に kit がありません: $SRC"
+  KIT="$SRC/kit"
 else
   command -v git >/dev/null 2>&1 || die "git が必要です。"
   TMP=$(mktemp -d 2>/dev/null || mktemp -d -t tdk)
@@ -61,7 +61,7 @@ else
   say "== fetch $REPO@$REF =="
   git clone --depth 1 --branch "$REF" "https://github.com/$REPO.git" "$TMP" >/dev/null 2>&1 \
     || die "clone 失敗: https://github.com/$REPO.git@$REF"
-  PLUGIN="$TMP/plugins/team-dev-kit"
+  KIT="$TMP/kit"
 fi
 cleanup() { [ -n "$CLEANUP" ] && rm -rf "$CLEANUP"; return 0; }
 trap cleanup EXIT INT TERM
@@ -178,7 +178,7 @@ PY
 say ""
 say "1) skills -> $SKILL_DEST"
 copied_any=0
-for s in "$PLUGIN"/skills/*/; do
+for s in "$KIT"/skills/*/; do
   [ -d "$s" ] || continue
   name=$(basename "$s")
   case "$name" in kit-*) continue ;; esac   # plugin 専用 skill は配らない
@@ -190,12 +190,12 @@ for s in "$PLUGIN"/skills/*/; do
   mkdir -p "$SKILL_DEST"; rm -rf "$d"; cp -R "$s" "$d"
   act "copy skill: $name"
 done
-[ "$copied_any" -eq 0 ] && say "  ⚠ 配布対象の業務 skill が見つかりません: $PLUGIN/skills/"
+[ "$copied_any" -eq 0 ] && say "  ⚠ 配布対象の業務 skill が見つかりません: $KIT/skills/"
 
 # --- 2. egress スクリプト + PreToolUse フック --------------------------------
 say ""
 say "2) egress guard (PreToolUse)"
-copy_file "$PLUGIN/scripts/egress-scan.sh" "$EGRESS_DEST" x
+copy_file "$KIT/scripts/egress-scan.sh" "$EGRESS_DEST" x
 
 # settings.json に PreToolUse フックを冪等マージ
 if [ "$DRY" -eq 1 ]; then
@@ -242,15 +242,15 @@ fi
 if [ "$PROJECT_IS_GIT" -eq 1 ]; then
   say ""
   say "3) guardrails -> $TARGET (framework + config)"
-  copy_file "$PLUGIN/framework/contract.md"        "$TARGET/.team-dev-kit/contract.md"
-  copy_file "$PLUGIN/framework/base.gitleaks.toml" "$TARGET/.team-dev-kit/base.gitleaks.toml"
-  copy_file "$PLUGIN/framework/pre-commit"         "$TARGET/.githooks/pre-commit" x
-  ensure_glue agents   "$PLUGIN/config-starters/AGENTS.md"     "$TARGET/AGENTS.md"
-  ensure_glue gitleaks "$PLUGIN/config-starters/gitleaks.toml" "$TARGET/.gitleaks.toml"
-  for f in "$PLUGIN"/config-starters/github/ISSUE_TEMPLATE/*; do
+  copy_file "$KIT/framework/contract.md"        "$TARGET/.team-dev-kit/contract.md"
+  copy_file "$KIT/framework/base.gitleaks.toml" "$TARGET/.team-dev-kit/base.gitleaks.toml"
+  copy_file "$KIT/framework/pre-commit"         "$TARGET/.githooks/pre-commit" x
+  ensure_glue agents   "$KIT/config-starters/AGENTS.md"     "$TARGET/AGENTS.md"
+  ensure_glue gitleaks "$KIT/config-starters/gitleaks.toml" "$TARGET/.gitleaks.toml"
+  for f in "$KIT"/config-starters/github/ISSUE_TEMPLATE/*; do
     [ -e "$f" ] && copy_config "$f" "$TARGET/.github/ISSUE_TEMPLATE/$(basename "$f")"
   done
-  copy_config "$PLUGIN/config-starters/github/PULL_REQUEST_TEMPLATE.md" "$TARGET/.github/PULL_REQUEST_TEMPLATE.md"
+  copy_config "$KIT/config-starters/github/PULL_REQUEST_TEMPLATE.md" "$TARGET/.github/PULL_REQUEST_TEMPLATE.md"
 
   # core.hooksPath（pre-commit を有効化する per-repo 設定）
   CUR=$(git -C "$TARGET" config --local core.hooksPath 2>/dev/null || true)

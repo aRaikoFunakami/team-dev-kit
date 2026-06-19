@@ -55,5 +55,5 @@ Skill + Hook 1 セットに集約しました。
 |---|---|---|
 | 読み手 | 人間（覚えて守る） | Claude Code（自動で適用） |
 | 守られ方 | 各自の注意力・レビュー指摘 | Skill 提案 / Hook によるブロック |
-| 実体 | Markdown を読む | `plugins/team-dev-kit/skills/*` と `hooks/` |
+| 実体 | Markdown を読む | `kit/skills/*` と `hooks/` |
 | いま見るべきか | いいえ（資料・サンプル） | はい（[`../../README.md`](../../README.md)） |

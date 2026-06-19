@@ -3,7 +3,7 @@
 > 🕰️ **これは team-dev-kit 導入前のサンプルです。**
 > いまはこの文体・構造の契約を `doc-writing` skill が保持し、設計文書を書くときに
 > 自動で適用します。現役の挙動は
-> [`plugins/team-dev-kit/skills/doc-writing/SKILL.md`](../../plugins/team-dev-kit/skills/doc-writing/SKILL.md) を参照。
+> [`kit/skills/doc-writing/SKILL.md`](../../kit/skills/doc-writing/SKILL.md) を参照。
 >
 > このルールは設計ドキュメント向けです。README など利用者向け導入文書は
 > 読み手が違うため必ずしも従わない。
