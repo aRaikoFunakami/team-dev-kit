@@ -57,9 +57,12 @@ git -C "$T" reset -q HEAD leak.txt 2>/dev/null || true; rm -f "$T/leak.txt"
 
 echo "== 3. L3 egress(installed egress-scan.sh) =="
 egress() { rc=0; CLAUDE_PROJECT_DIR="$T" sh "$T/.team-dev-kit/egress-scan.sh" <"$1" >/dev/null 2>&1 || rc=$?; echo "$rc"; }
-chk "PII を block(exit2)"   "[ \$(egress '$FIX/egress-pii.json') = 2 ]"
-chk "clean を素通り(exit0)" "[ \$(egress '$FIX/egress-clean.json') = 0 ]"
-chk "非gh を素通り(exit0)"  "[ \$(egress '$FIX/egress-skip.json') = 0 ]"
+chk "PII を block(exit2)"          "[ \$(egress '$FIX/egress-pii.json') = 2 ]"
+chk "clean を素通り(exit0)"        "[ \$(egress '$FIX/egress-clean.json') = 0 ]"
+chk "非gh を素通り(exit0)"         "[ \$(egress '$FIX/egress-skip.json') = 0 ]"
+chk "comment 経路の PII を block"  "[ \$(egress '$FIX/egress-comment-pii.json') = 2 ]"
+chk "gh api 変更系を block(DENY)"  "[ \$(egress '$FIX/egress-api-post.json') = 2 ]"
+chk "壊れた入力JSONを block(fail-closed)" "[ \$(egress '$FIX/egress-badjson.json') = 2 ]"
 
 echo "== 4. 冪等性(再実行で skip/keep・重複なし) =="
 out=$(run_bs "$T" 2>&1)
