@@ -3,7 +3,7 @@
 #       実際にアップロードされる本文だけ（--title / --body の値、--body-file の中身）を gitleaks で走査し、
 #       秘密情報・個人情報を含む場合は exit 2 で実行を拒否する。
 #       gitignore された下書きは git 履歴を通らず pre-commit(L1) では捕捉できないため、この経路を塞ぐ唯一の層。
-# 設計: instructions/secret-scan.md。設定は .gitleaks.toml を共有する。
+# 設計: docs/secret-scan.md。設定は .gitleaks.toml を共有する。
 # 注意: コマンド行全体は走査しない。cwd や --body-file の絶対パスにはローカルのホームパス
 #       （実ユーザー名）が当然含まれるが、それらはアップロードされないため対象外にする（誤検知回避）。
 #       --body 系の指定が無い gh create（テンプレ/コミットから本文生成）は本文を特定できず素通りする。
