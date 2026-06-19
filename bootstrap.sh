@@ -172,19 +172,25 @@ PY
   fi
 }
 
-# --- 1. skill（業務 skill のみ。kit-* は plugin 専用なので除外） --------------
+# --- 1. skill（業務 skill のみ・plugin の skills/ を動的列挙） ----------------
+# kit-* skill は ${CLAUDE_PLUGIN_ROOT} 依存（plugin 専用）なので除外する。
+# 固定リストにすると plugin への skill 追加を黙って取りこぼすため走査で拾う。
 say ""
 say "1) skills -> $SKILL_DEST"
-SKILLS="git-commit github-workflow doc-writing ticket-draft ticket-template ticket-publish ticket-pr-publish"
-for name in $SKILLS; do
-  s="$PLUGIN/skills/$name"
+copied_any=0
+for s in "$PLUGIN"/skills/*/; do
+  [ -d "$s" ] || continue
+  name=$(basename "$s")
+  case "$name" in kit-*) continue ;; esac   # plugin 専用 skill は配らない
+  [ -f "$s/SKILL.md" ] || { act "skip (no SKILL.md): $name"; continue; }
+  copied_any=1
   d="$SKILL_DEST/$name"
-  [ -d "$s" ] || { act "missing in source: $name"; continue; }
   if [ -e "$d" ] && [ "$FORCE" -eq 0 ]; then act "skip (exists): $name"; continue; fi
   if [ "$DRY" -eq 1 ]; then act "copy skill: $name"; continue; fi
   mkdir -p "$SKILL_DEST"; rm -rf "$d"; cp -R "$s" "$d"
   act "copy skill: $name"
 done
+[ "$copied_any" -eq 0 ] && say "  ⚠ 配布対象の業務 skill が見つかりません: $PLUGIN/skills/"
 
 # --- 2. egress スクリプト + PreToolUse フック --------------------------------
 say ""
@@ -201,12 +207,24 @@ import json, os, sys
 dst = sys.argv[1]
 cmd = os.environ["CMD"]
 cur = {}
-if os.path.exists(dst):
-    with open(dst, encoding="utf-8") as f:
-        cur = json.load(f)
+if os.path.exists(dst) and os.path.getsize(dst) > 0:
+    try:
+        with open(dst, encoding="utf-8") as f:
+            cur = json.load(f)
+        if not isinstance(cur, dict):
+            raise ValueError("top-level is not an object")
+    except Exception as e:
+        # 既存 settings.json が壊れている/空 → 上書きで壊さず、フック追記だけ安全にスキップ。
+        # 導入を途中で止めない（fail-safe）。
+        print(f"  ⚠ {dst} を解析できません（{e}）。PreToolUse フックの追記をスキップします。")
+        print(f"    手動で hooks.PreToolUse に command を追加してください: {cmd}")
+        sys.exit(0)
 hooks = cur.setdefault("hooks", {})
 pre = hooks.setdefault("PreToolUse", [])
-existing = {h.get("command") for e in pre for h in e.get("hooks", [])}
+if not isinstance(pre, list):
+    print(f"  ⚠ hooks.PreToolUse が配列ではありません。追記をスキップします。手動追加: {cmd}")
+    sys.exit(0)
+existing = {h.get("command") for e in pre if isinstance(e, dict) for h in e.get("hooks", []) if isinstance(h, dict)}
 if cmd not in existing:
     pre.append({"matcher": "Bash", "hooks": [{"type": "command", "command": cmd}]})
     with open(dst, "w", encoding="utf-8") as f:
