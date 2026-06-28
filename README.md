@@ -167,6 +167,32 @@ Claude Code を起動して Trust を許可すれば、`.claude/skills/` の ski
 本物に近いランダムな秘密情報をわざと commit してみて、pre-commit が止めれば成功です
 （`AKIAIOSFODNN7EXAMPLE` のような例示キーは誤検知回避のため素通りします）。
 
+**3. default ブランチを保護する（GitHub 設定・必須）**
+
+`.claude/settings.json` の deny は **Claude エージェントの直接 push を止めるだけ**で、人間や他の
+クライアントからの `git push origin main` は止められません。default ブランチへの直接 push を確実に
+防ぐ強制は **GitHub のブランチ保護**で行います（ファイル配布では設定できないため、リポジトリごとに
+一度だけ実施。repo の admin 権限が必要です）。
+
+```bash
+# default ブランチ名は固定せず動的取得する（main / master どちらでも動く）
+OWNER_REPO="<owner>/<repo>"
+BR="$(gh repo view "$OWNER_REPO" --json defaultBranchRef -q .defaultBranchRef.name)"
+gh api -X PUT "repos/$OWNER_REPO/branches/$BR/protection" --input - <<'JSON'
+{
+  "required_status_checks": null,
+  "enforce_admins": true,
+  "required_pull_request_reviews": { "required_approving_review_count": 0 },
+  "restrictions": null
+}
+JSON
+```
+
+これで PR 経由のマージのみが許可され、直接 push は管理者でも拒否されます（`enforce_admins: true`）。
+
+> ⚠️ この `gh api` の **変更系リクエスト（PUT）は egress ガードによりエージェントからは実行できません**。
+> 秘密情報を含まないことを確認のうえ、**人間がターミナルで実行**してください。
+
 これで導入は完了です。
 配置されたファイルはこのあとチームに共有する必要がありますが、
 そのコミット & PR は次の [実際に使ってみる](#実際に使ってみるissue--開発--pr--マージ) で
