@@ -169,10 +169,9 @@ Claude Code を起動して Trust を許可すれば、`.claude/skills/` の ski
 
 **3. default ブランチを保護する（GitHub 設定・必須）**
 
-`.claude/settings.json` の deny は **Claude エージェントの直接 push を止めるだけ**で、人間や他の
-クライアントからの `git push origin main` は止められません。default ブランチへの直接 push を確実に
-防ぐ強制は **GitHub のブランチ保護**で行います（ファイル配布では設定できないため、リポジトリごとに
-一度だけ実施。repo の admin 権限が必要です）。
+default ブランチへの直接 push を確実に防ぐ強制は **GitHub のブランチ保護**で行います（ファイル配布では
+設定できないため、リポジトリごとに一度だけ実施。repo の admin 権限が必要です）。これは人間・エージェント・
+他クライアントの**すべて**に効く唯一の確実な強制レイヤです。
 
 ```bash
 # default ブランチ名は固定せず動的取得する（main / master どちらでも動く）
@@ -192,6 +191,32 @@ JSON
 
 > ⚠️ この `gh api` の **変更系リクエスト（PUT）は egress ガードによりエージェントからは実行できません**。
 > 秘密情報を含まないことを確認のうえ、**人間がターミナルで実行**してください。
+
+**（任意）Claude エージェントの破壊的コマンドを先回りで止める**
+
+bootstrap が配布する `.claude/settings.json` には **egress フックのみ**が入り、`permissions.deny` は
+**配布しません**（チームの運用方針に委ねるため）。GitHub のブランチ保護とは別に、Claude エージェントが
+default ブランチへ直接 push したり破壊的コマンドを打つのを**手前で**止めたい場合は、`.claude/settings.json`
+の `permissions.deny` に以下を追記します（GitHub 保護を置き換えるものではなく、エージェント向けの
+二重ガードです）。
+
+```jsonc
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push origin main)",
+      "Bash(git push origin master)",
+      "Bash(git push origin HEAD:main)",
+      "Bash(git push origin HEAD:master)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
+    ]
+  }
+}
+```
+
+> deny の glob は境界を表現できないため、`Bash(git push * main*)` のような広い形は避けます
+> （`main-feature` 等のブランチまで巻き込むため）。確実な強制はあくまで GitHub のブランチ保護です。
 
 これで導入は完了です。
 配置されたファイルはこのあとチームに共有する必要がありますが、
