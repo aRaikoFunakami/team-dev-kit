@@ -4,7 +4,7 @@ description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成
 ---
 
 <!--
-概要: GitHub 運用契約 skill。Issue 要否・branch/PR 規約・default ブランチ push の委譲・worktree での着手・closing keyword を与える。
+概要: GitHub 運用契約 skill。Issue 要否・branch/PR 規約・default ブランチ push の委譲・worktree での着手・closing keyword・PR 作成後の自己レビューを与える。
 旧 instructions 配下の GitHub 運用契約を移植したもの。GitHub 操作のたびに参照する。
 -->
 
@@ -202,6 +202,15 @@ gh pr create \
 - `--base` は default ブランチ（通常 `main`）を指定する。決め打ちせず上記のとおり動的取得する。
 - タイトルは `type(scope): subject` 形式（→ git-commit skill）に揃える。
 - PR テンプレート（`.github/PULL_REQUEST_TEMPLATE.md`）がある場合はその構造に沿い、`Closes #` を必ず埋める。
+
+### PR 作成後の自己レビュー（必須）
+
+PR を作成したら、続けて **その PR の差分を自分でレビューする**。
+`/code-review` を実行し、現ブランチ差分をバグ・簡素化観点で点検する。
+
+- findings は **ユーザーへ報告する**。自動修正・PR への自動コメント投稿はしない（修正可否は人が判断する）。
+- findings が無ければ「self-review: 指摘なし」と明示する。
+- 自己レビューは PR 作成フローの一部。省略しない。
 
 ### 根拠
 
