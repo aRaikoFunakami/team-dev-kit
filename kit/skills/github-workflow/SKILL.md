@@ -4,7 +4,7 @@ description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成
 ---
 
 <!--
-概要: GitHub 運用契約 skill。Issue 要否・branch/PR 規約・worktree での着手・closing keyword を与える。
+概要: GitHub 運用契約 skill。Issue 要否・branch/PR 規約・deny された push の委譲・worktree での着手・closing keyword を与える。
 旧 instructions 配下の GitHub 運用契約を移植したもの。GitHub 操作のたびに参照する。
 -->
 
@@ -65,6 +65,40 @@ Issue⇄PR の紐付けは PR 作成時に成立する（commit に Issue 番号
 
 1. **default ブランチ（`main`）で直接作業しないこと** — 必ず feature ブランチを作成してから作業する。
 2. **default ブランチへ直接 push しないこと** — 変更は必ず PR 経由でマージする。
+
+### deny された git コマンド — default ブランチでは commit / push しない
+
+`.claude/settings.json` の `permissions.deny` で、不可逆・破壊的な git コマンドはエージェントから
+**実行できない**。これは意図された安全設計であり、deny に当たること自体は **エラーでも障害でもない**。
+
+| コマンド | 状態 | エージェントの扱い |
+|----------|------|--------------------|
+| `git push origin main*` / `git push * main*`（`master` も同様） | deny | **default ブランチへの直接 push のみ禁止**。通常の PR フローでは発生しない |
+| `git push`（feature ブランチ） | 許可 | **エージェントが直接 push してよい**（初回 `git push -u origin <branch>`、再 push は `--force-with-lease`） |
+| `git reset --hard*` | deny | 使わない。履歴・作業ツリーを壊すため人間の判断に委ねる |
+| `rm -rf*` | deny | 使わない。退避は削除でなく `mv` |
+| `git clean*` | （非 deny だが）原則使わない | 未追跡ファイルを消すため、必要時はユーザーに依頼する |
+
+deny に当たったら、**リトライや回避（別表記での再 push 等）をしない**。
+実行すべき正確なコマンドを提示してユーザーに依頼し、開発プロセスを止めずに継続する。
+commit・feature ブランチへの push・`gh` 系（`gh pr create` 等）はエージェントが実行してよい。
+
+#### commit / push の手順
+
+1. **commit する前に、現在のブランチが default ブランチでないことを確認する**:
+   `git remote show origin` の `HEAD branch`（または
+   `gh repo view --json defaultBranchRef -q .defaultBranchRef.name`）。default は
+   `main` / `master` とは限らない。
+2. **default ブランチ上なら commit も push もしない。** feature ブランチ／worktree を切り忘れた
+   異常状態。**ここで作業を止め**、worktree で着手し直してから再開する（「worktree での着手」参照）。
+   誤って default 上で commit 済みなら、その commit を feature ブランチへ退避してから続ける。
+3. feature ブランチであることを確認できたら commit する。
+4. **push はエージェントが直接実行する**（初回 `git push -u origin <branch>`、rebase 後の再 push は
+   `--force-with-lease`）。default ブランチ（`main` / `master`）への push は deny され、通常フローでも発生しない。
+5. push 後に後続（`gh pr create` 等）へ進む。
+
+> 補足: push が deny ではなく **環境側の認証等で失敗** する場合は、ユーザーに
+> `! git push -u origin <branch>` の実行を依頼する（`! <command>` でこのセッション内実行・出力が会話に入る）。
 
 ### ブランチ命名規則
 
