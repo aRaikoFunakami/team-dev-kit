@@ -1,6 +1,6 @@
 ---
 name: github-workflow
-description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成・レビュー、ブランチ運用）に起動する。gh コマンド必須、Issue の要否は「挙動を変えるか」で判断、branch + PR は常に必須（default ブランチ＝main への直接 push 禁止）、PR 本文に Closes #N で Issue を紐付ける、closing keyword は default ブランチでのみ発火、といった本リポジトリの GitHub 運用契約を与える。「Issue 作って」「PR 出して」「ブランチ切って」等で発火。
+description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成・レビュー、ブランチ運用）に起動する。gh コマンド必須、Issue の要否は「挙動を変えるか」で判断、branch + PR は常に必須（default ブランチ＝main への直接 push 禁止）、PR 本文に Closes #N で Issue を紐付ける、closing keyword は default ブランチでのみ発火、PR 作成後は /code-review で自己レビュー、といった本リポジトリの GitHub 運用契約を与える。「Issue 作って」「PR 出して」「ブランチ切って」等で発火。
 ---
 
 <!--
