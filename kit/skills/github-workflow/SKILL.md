@@ -4,7 +4,7 @@ description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成
 ---
 
 <!--
-概要: GitHub 運用契約 skill。Issue 要否・branch/PR 規約・closing keyword を与える。
+概要: GitHub 運用契約 skill。Issue 要否・branch/PR 規約・worktree での着手・closing keyword を与える。
 旧 instructions 配下の GitHub 運用契約を移植したもの。GitHub 操作のたびに参照する。
 -->
 
@@ -76,6 +76,39 @@ Issue⇄PR の紐付けは PR 作成時に成立する（commit に Issue 番号
 | Documentation | `docs/<issue-number>-<short-description>` |
 
 - 作業開始前に、現在のブランチが default ブランチ（`main`）でないことを確認する。該当する場合は上記命名規則で feature ブランチを作成してから着手する。
+
+### worktree での着手（必須）
+
+新規作業は **必ず `git worktree`** で別ディレクトリに着手する。`git switch -c` / `git checkout` で
+カレントの作業ツリーを切り替えることは、**所要時間が一瞬の変更であっても禁止**する。切り替え方式は
+並行作業中の他ブランチ・起動中のプロセス・未コミット変更を巻き込み、取り違えや誤コミットといった
+並行開発の事故を起こすため。
+
+worktree は **別ディレクトリに別ブランチを同時チェックアウト**する（`.git` は共有、作業ツリーのみ
+複製）。default ブランチを起動したまま feature を別 dir で開発でき、stash 不要で並行作業できる。
+AI エージェントを並列実行する場合も worktree が前提になる（Agent tool の `isolation: "worktree"` がこれを使う）。
+
+**置き場規約:** リポジトリ外の固定 dir `../worktrees/<branch>` に集約する（リポジトリ内を汚さない）。
+
+```bash
+# 起点は必ず origin/<default> を最新化して指定する（未 push のローカル default から分岐しない）。
+# <default> は gh repo view --json defaultBranchRef -q .defaultBranchRef.name で動的判定した値。
+git fetch origin
+git worktree add ../worktrees/<issue>-<desc> -b <type>/<issue>-<desc> origin/<default>
+cd ../worktrees/<issue>-<desc>
+```
+
+**注意:**
+- 「default ブランチで直接作業しない／直接 push しない」禁止事項は worktree でも不変。
+- 依存物（`node_modules` / `.venv` 等）は作業ツリー側にあり worktree 間で共有されない。
+  新 worktree ではプロジェクトの手順で再構築する。
+
+**後片付け:**
+
+```bash
+git worktree remove ../worktrees/<issue>-<desc>   # 作業ツリーを削除
+git worktree prune                            # 参照の掃除（手動削除した場合）
+```
 
 ### Issue 番号の後付け
 
