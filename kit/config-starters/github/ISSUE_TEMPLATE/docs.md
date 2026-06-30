@@ -12,6 +12,11 @@ assignees: ''
 各見出しは自由記述。不要な節は削除してよい。
 -->
 
+## 検証単位 (feature)
+<!-- このIssueが単体で検証できるか。できないなら束ねる feature 名を1行で。兄弟Issueは列挙しない -->
+- feature: 単体            <!-- 単体で検証可。N で束ねる場合は feature/<name> の <name>。束ね時の Task ブランチは feature/<name>-<issue>-<desc> -->
+- E2E: このIssue単体で検証   <!-- 束ね時は「feature gate で検証（このIssue単体では検証しない）」 -->
+
 ## 背景・目的
 <!-- なぜ更新が必要か。現状の記述の問題・不足 -->
 
