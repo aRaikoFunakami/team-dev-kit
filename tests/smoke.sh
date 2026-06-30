@@ -123,6 +123,21 @@ chk "global: skill は \$HOME/.claude/skills" "[ -f '$FH/.claude/skills/git-comm
 chk "global: egress も \$HOME 配下"          "[ -x '$FH/.claude/team-dev-kit/egress-scan.sh' ]"
 chk "global: B層(pre-commit)は repo 配下"    "[ -x '$G/.githooks/pre-commit' ]"
 
+echo "== 9. Issue #19 統合フロー doc 反映(kit ソース静的検証) =="
+GW="$ROOT/kit/skills/github-workflow/SKILL.md"
+TD="$ROOT/kit/skills/ticket-draft/SKILL.md"
+FT="$ROOT/kit/config-starters/github/ISSUE_TEMPLATE/feature.md"
+chk "GW: 統合点セクション"            "grep -q '統合点' '$GW'"
+chk "GW: アンブレラ命名 feature/<name>" "grep -q 'feature/<name>' '$GW'"
+chk "GW: Task 命名 feature/<name>-<issue" "grep -q 'feature/<name>-<issue-number>-<short-description>' '$GW'"
+chk "GW: D/F 衝突回避の注記"          "grep -q 'D/F conflict' '$GW'"
+chk "GW: Task PR は Refs #"           "grep -q 'Refs #' '$GW'"
+chk "GW: 最終PRに Closes 集約例"      "grep -q 'Closes #101 #102 #103' '$GW'"
+chk "GW: E2E はプロジェクト規約へ委譲" "grep -q '各プロジェクト規約に従う' '$GW'"
+chk "TD: 検証単位の確定手順"          "grep -q '検証単位' '$TD'"
+chk "TD: feature グルーピング"        "grep -q 'グルーピング' '$TD'"
+chk "FT: 検証単位 (feature) 節"       "grep -q '## 検証単位 (feature)' '$FT'"
+
 echo ""
 echo "== 結果: pass=$pass fail=$fail =="
 [ "$fail" -eq 0 ]
