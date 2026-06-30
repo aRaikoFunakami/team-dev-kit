@@ -123,6 +123,29 @@ chk "global: skill は \$HOME/.claude/skills" "[ -f '$FH/.claude/skills/git-comm
 chk "global: egress も \$HOME 配下"          "[ -x '$FH/.claude/team-dev-kit/egress-scan.sh' ]"
 chk "global: B層(pre-commit)は repo 配下"    "[ -x '$G/.githooks/pre-commit' ]"
 
+echo "== 9. Issue #19 統合フロー doc 反映(kit ソース静的検証) =="
+GW="$ROOT/kit/skills/github-workflow/SKILL.md"
+TD="$ROOT/kit/skills/ticket-draft/SKILL.md"
+PP="$ROOT/kit/skills/ticket-pr-publish/SKILL.md"
+TPL="$ROOT/kit/config-starters/github/ISSUE_TEMPLATE"
+# 概念/構造を pin する（言い換えで割れる literal や、他所にも出る単独キーワードは避ける）
+chk "GW: 統合点セクション見出し"      "grep -q '## feature と統合点' '$GW'"
+chk "GW: アンブレラ命名 feature/<name>" "grep -q 'feature/<name>' '$GW'"
+chk "GW: Task 命名は - 区切り"        "grep -q 'feature/<name>-<issue-number>-<short-description>' '$GW'"
+chk "GW: D/F 衝突回避の注記"          "grep -q 'D/F conflict' '$GW'"
+chk "GW: Task PR は Refs #"           "grep -q 'Refs #' '$GW'"
+chk "GW: 最終PRに Closes 集約"        "grep -q '集約' '$GW' && grep -q 'Closes' '$GW'"
+chk "GW: E2E はプロジェクト規約へ委譲" "grep -q '各プロジェクト規約' '$GW'"
+chk "TD: 検証単位の確定手順 2'"       "grep -q '検証単位（feature）の確定' '$TD'"
+chk "TD: feature グルーピング"        "grep -q 'グルーピング' '$TD'"
+# ticket-pr-publish が束ねフロー対応（Task PR は Refs/base=アンブレラ）
+chk "PP: Task ブランチ判定"           "grep -q 'Task ブランチ' '$PP'"
+chk "PP: Task PR は Refs #<n>"        "grep -q 'Refs #<n>' '$PP'"
+# Issue テンプレ 3 種に検証単位節（github-workflow が bugfix/hotfix も束ね可と明記する整合）
+chk "FT: feature 検証単位節"          "grep -q '## 検証単位 (feature)' '$TPL/feature.md'"
+chk "FT: bug 検証単位節"              "grep -q '## 検証単位 (feature)' '$TPL/bug.md'"
+chk "FT: docs 検証単位節"             "grep -q '## 検証単位 (feature)' '$TPL/docs.md'"
+
 echo ""
 echo "== 結果: pass=$pass fail=$fail =="
 [ "$fail" -eq 0 ]

@@ -26,6 +26,16 @@ argument-hint: "[@PLAN.md など計画ファイル（任意）]"
    - 推定した「項目 → 種別」の対応表を提示し、`AskUserQuestion` で一括確認・修正を取る。
      項目数が多くても、まとめて 1 回で確認する（項目ごとに N 回聞かない）。
 
+2'. **検証単位（feature）の確定**
+   - 抽出項目のうち「単体で E2E 検証できないもの」を検出し、**同じ E2E シナリオで検証される
+     項目を 1 つの feature にグルーピング** する。
+   - 「項目 → 種別 + feature」の対応表を提示し、手順 2 の `AskUserQuestion` で種別と一括確認する
+     （項目ごとに N 回聞かない）。
+   - 各下書きの「検証単位」節に feature 名を 1 行記載する（単体なら `単体`）。
+     **兄弟 Issue は列挙しない**（メンバーの SSOT は EPIC/トラッキング Issue の task-list か
+     `work/<name>/plan.md`。子 Issue は所属先を指す 1 行のみ）。
+   - N≥2 の feature には、メンバーを束ねる SSOT（トラッキング Issue の task-list 推奨）を 1 つ用意する。
+
 3. **下書きの生成**
    - 保存先 timestamp を `date +%Y%m%d-%H%M%S` を Bash で 1 回取得し、全項目で共有する。
    - 各項目の保存先を `.issue_drafts/<type>-<timestamp>-NN.md` とする

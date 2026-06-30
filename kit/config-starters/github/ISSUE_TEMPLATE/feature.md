@@ -12,8 +12,13 @@ assignees: ''
 各見出しは自由記述。不要な節は削除してよい。
 -->
 
+## 検証単位 (feature)
+<!-- このIssueが単体でE2E検証できるか。できないなら束ねる feature 名を1行で。兄弟Issueは列挙しない -->
+- feature: 単体            <!-- 単体で E2E 可。N で束ねる場合は feature/<name> の <name> を書く -->
+- E2E: このIssue単体で検証   <!-- 束ね時は「feature gate で検証（このIssue単体では検証しない）」 -->
+
 ## ブランチ
-<!-- 起票後に作成する feature ブランチ名。issue-number は採番後に確定 -->
+<!-- 単体: feature/<issue>-<desc> / 束ね: feature/<name>-<issue>-<desc>（base はアンブレラ feature/<name>。/ 階層は git で衝突するため - 区切り）。issue-number は採番後に確定 -->
 feature/<issue-number>-short-description
 
 ## 背景・目的
