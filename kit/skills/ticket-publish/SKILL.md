@@ -20,22 +20,30 @@ argument-hint: "@.issue_drafts/<file>.md"
 2. ファイルを読む。frontmatter（先頭 `---` から次の `---` まで）から抽出:
    - `title:` の値（クォート除去）
    - `labels:` の値（カンマ区切りならそのまま）
-3. frontmatter を除いた残り全文を body とする。`/tmp/ticket-body-<basename>.txt` に書き出す。
+3. frontmatter を除いた残り全文を body とする。プロジェクトの一時ディレクトリ
+   （`work/tmp/ticket-body-<basename>.txt` 等）へ書き出す。**`/tmp` 等のシステム一時
+   ディレクトリは使わない**（team-dev-kit 契約）。ディレクトリが無ければ作る。
 4. **発行前チェック（必須・ここは通常文で確認）**:
    - title に `scope` や `<issue-number>` 等のプレースホルダが残っていないか。
-   - body の必須節（受け入れ条件・対象ファイル等）が空でないか。
-   - 抽出した title / labels と発行先リポジトリ名をユーザーに提示し、発行してよいか確認する。
+   - title が変更対象を名指ししているか（`内容取得ツール` 等の抽象語・曖昧語が残っていないか）。
+   - body の必須節（受け入れ条件・変更対象等）が空でないか。
+   - **構成チェック**（spec-first を担保する。ズレていれば発行前に修正を促す）:
+     - 冒頭が「目的」節か（プロセスメタ＝検証単位/ブランチが先頭に来ていないか）。
+     - 仕様が 1 箇所（`仕様` 節）に集約され、背景・設計・補足に散在していないか。
+     - 背景が過長でないか（目安: 本文の 3 割超なら警告し、詳細を調査結果/ADR へ寄せる）。
+   - body の見出し構成（節の並び）を要約して提示し、title / labels / 発行先リポジトリ名と
+     ともにユーザーへ示し、発行してよいか確認する。
      これは外部公開・取り消し困難な操作なので、明示の同意を得てから実行する。
 5. 同意後に実行（リポジトリは cwd の origin を自動利用、`-R` は付けない）:
    ```
-   gh issue create --title "<title>" --label "<labels>" --body-file /tmp/ticket-body-<basename>.txt
+   gh issue create --title "<title>" --label "<labels>" --body-file work/tmp/ticket-body-<basename>.txt
    ```
    `--title --label --body-file` を揃えるので非対話で発行される。
 6. 出力された Issue URL を表示する。
 7. **発行確定後の後始末（下書き削除）**:
    - Issue URL が返り発行が確定したことを確認してから行う。発行前・発行失敗時は削除しない。
    - GitHub が source of truth になったため、ローカル下書きは不要。削除対象パス（発行した下書きと
-     `/tmp/ticket-body-<basename>.txt`）をユーザーに提示し、削除してよいか確認する。
+     `work/tmp/ticket-body-<basename>.txt`）をユーザーに提示し、削除してよいか確認する。
    - 同意後に削除する。`.issue_drafts/` ディレクトリ自体は残す（次の下書き用）。
    - 発行後に下書きファイル名へ発行番号を追記したい場合は、削除前にその旨を選べる（任意）。
 
