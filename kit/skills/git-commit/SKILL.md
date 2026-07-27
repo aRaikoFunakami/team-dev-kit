@@ -127,6 +127,43 @@ DATABASE_POOL_SIZE is now required.
 Deployments without this variable will fail during startup.
 ```
 
+## squash merge 時の最終コミットメッセージ
+
+squash merge では、feature ブランチ上の個々の作業コミット（`fix typo`、`レビュー対応` 等）を
+そのまま残さず、squash 後の 1 コミットへ要約する。GitHub のデフォルト（squash された全コミットの
+メッセージを本文にそのまま並べる）は使わず、`gh pr merge --squash --subject "..." --body "..."` で
+明示的に整形する（マージ操作自体は → github-workflow skill「squash merge 時の PR マージ」）。
+
+- **subject**: PR タイトル（`type(scope): subject` 形式）に続けて `(#<PR番号>)` を**明示的に付ける**。
+  `gh pr merge --subject` で指定した文字列はそのまま使われ、GitHub 側で自動付与はされない
+  （自動付与は `--subject` を省略し GitHub のデフォルト提案タイトルに任せた場合のみ）。
+- **本文**: 上記「本文」節のルール（なぜ・設計判断・互換性/セキュリティ影響のみ）をそのまま適用する。
+  squash された個々の作業コミットの一覧は書かない。
+- **Issue 番号**: 本文に `Closes #<n>` は書かない（Issue との紐付けは PR 本文側で完結済み。
+  →「本文」節・github-workflow skill「Issue との紐付け」）。可読性目的で本文末尾に
+  `Refs #<issue-number>` を添えるのは任意。
+
+悪い例（GitHub デフォルトのまま）:
+
+```
+feat(user-search): add cursor-based pagination (#123)
+
+* fix typo
+* レビュー対応
+* wip
+```
+
+良い例:
+
+```
+feat(user-search): add cursor-based pagination (#123)
+
+Preserve compatibility with existing clients and limit each response
+to 100 users.
+
+Refs #120
+```
+
 ## 禁止事項
 
 - 1コミットに複数の論点を含める

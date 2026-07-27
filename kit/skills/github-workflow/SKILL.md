@@ -287,6 +287,25 @@ PR を作成したら、続けて **その PR の差分を自分でレビュー�
 - findings が無ければ「self-review: 指摘なし」と明示する。
 - 自己レビューは PR 作成フローの一部。省略しない。
 
+### squash merge 時の PR マージ
+
+squash merge を使う場合、GitHub デフォルトの「squash された全コミットのメッセージをそのまま本文に
+流し込む」動作は使わず、`--subject` / `--body` を明示して整形する（本文の書き方 → git-commit skill
+「squash merge 時の最終コミットメッセージ」。マージ方式そのものを squash に限定するかは consumer
+リポジトリの裁量とする）。
+
+```bash
+gh pr merge <PR番号またはブランチ> --squash \
+  --subject "<type(scope): subject> (#<PR番号>)" \
+  --body "<なぜ・設計判断・影響範囲>"
+```
+
+- `--subject` は PR タイトル（`type(scope): subject`）に続けて `(#<PR番号>)` を**明示的に付ける**
+  （`--subject` 指定時は GitHub 側で自動付与されない。省略時のデフォルト提案タイトルのみ自動付与される）。
+- `--body` に squash された個々の作業コミット一覧（`fix typo` 等）は書かない。
+- `Closes #<n>` は PR 本文側で完結済みのため squash コミット本文には書かない
+  （参照だけ残す場合は `Refs #<n>`）。
+
 ### 根拠
 
 GitHub 公式ドキュメント [Linking a pull request to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) による。closing keyword は `close/closes/closed`, `fix/fixes/fixed`, `resolve/resolves/resolved`。default ブランチ以外を対象とした PR では keyword は無視される。
