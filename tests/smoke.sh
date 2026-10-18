@@ -144,6 +144,7 @@ chk "TD: feature グルーピング"        "grep -q 'グルーピング' '$TD'"
 # ticket-pr-publish が束ねフロー対応（Task PR は Refs/base=アンブレラ）
 chk "PP: Task ブランチ判定"           "grep -q 'Task ブランチ' '$PP'"
 chk "PP: Task PR は Refs #<n>"        "grep -q 'Refs #<n>' '$PP'"
+chk "PP: 認可済み呼び出しは同意待ちしない" "grep -q '認可済み呼び出し' '$PP' && grep -q '従来どおり同意を取る' '$PP'"
 # Issue テンプレ 3 種に検証単位節（github-workflow が bugfix/hotfix も束ね可と明記する整合）
 chk "FT: feature 検証単位節"          "grep -q '## 検証単位 (feature)' '$TPL/feature.md'"
 chk "FT: bug 検証単位節"              "grep -q '## 検証単位 (feature)' '$TPL/bug.md'"
