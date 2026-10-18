@@ -24,7 +24,7 @@ argument-hint: "@.issue_drafts/<file>.md"
    （`work/tmp/ticket-body-<basename>.txt` 等）へ書き出す。**`/tmp` 等のシステム一時
    ディレクトリは使わない**（team-dev-kit 契約）。ディレクトリが無ければ作る。
 4. **発行前チェック（必須・ここは通常文で確認）**:
-   - title が空でないか（テンプレの `title:` は空で配られる。空のままでは `gh issue create --title ""` が失敗する）。
+   - title が空でないか（テンプレの `title:` は空で配られる）。
    - title に `type(scope):` の接頭辞や `<issue-number>` 等のプレースホルダが残っていないか。
    - title が契約の `lang` の言語で書かれ、変更対象を名指しした一文になっているか（`内容取得ツール` 等の抽象語・曖昧語が残っていないか）。
    - body が `.team-dev-kit/writing.md` に沿っているか（略語に正式名称が付いているか、括弧の中に文が無いか、他 Issue の参照に要点が添えてあるか）。
