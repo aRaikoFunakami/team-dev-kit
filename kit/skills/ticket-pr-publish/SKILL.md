@@ -12,7 +12,7 @@ argument-hint: "[#<issue-number> など番号上書き（任意）]"
 に切り替える（早期 close 回避。close は最終 PR が集約。→ github-workflow skill）。
 運用規約は github-workflow skill、コミット規約は git-commit skill を参照。
 発行は外部公開・取り消し困難なので、明示的に /ticket-pr-publish が呼ばれたときのみ起動し
-（自然言語の「PR 作って」等では自動起動しない）、加えて発行前に必ず明示同意を取る（二重ガード）。
+（自然言語の「PR 作って」等では自動起動しない）、加えて発行前に明示同意を取る（二重ガード。ただし手順 6 の認可済み呼び出しは除く）。
 -->
 
 現在のブランチの変更を GitHub Pull Request として作成する。手順を厳守する。
@@ -53,7 +53,7 @@ argument-hint: "[#<issue-number> など番号上書き（任意）]"
    - これは外部公開・取り消し困難な操作なので、明示の同意を得てから実行する。
    - **認可済み呼び出し（例外）:** オーケストレータ skill（例: issue-to-pr）が「ユーザーが起動時にこの Issue の PR 発行を認可済み」と明示して呼んだ場合に限り、上の提示だけ行い、同意待ちをせず手順 7 へ進む。認可が明示されない呼び出し（単独の `/ticket-pr-publish`、自然文）は従来どおり同意を取る。認可の有無は呼び出し元の明示だけで判断し、推測しない。発行先・base・本文の決定ルール（手順 1〜5）は変わらない。
 
-7. **発行（同意後）**
+7. **発行（同意後、または認可済み呼び出し）**
    - リポジトリは cwd の origin を自動利用（`-R` は付けない）:
      ```
      gh pr create --base <default-branch> --title "<title>" --body-file /tmp/ticket-pr-publish-body-<branch>.txt
