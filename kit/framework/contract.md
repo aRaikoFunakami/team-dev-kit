@@ -24,7 +24,14 @@
 
 > 導入・更新は `bootstrap.sh`（curl 再実行）で行う。skill は `.claude/skills/` に配置され自動で読まれる。
 
-## 3. 秘密情報・個人情報スキャン
+## 3. 言語（lang）と文章
+
+- 既定は `lang: ja`。Issue・commit・PR・設計文書の自然文はこの言語で書く
+- プロジェクトは AGENTS.md の「プロジェクト固有の規約」に `lang: en` と書けば切り替わる。既存の Issue / commit は書き換えない
+- 言語に関係なく常に英語（ASCII）: ブランチ名、ラベル名、`type(scope):` の type と scope
+- 文章の書き方（読み手の想定、文の組み立て、書かないこと）は `.team-dev-kit/writing.md` に従う
+
+## 4. 秘密情報・個人情報スキャン
 
 - 人間の `git commit` は `.githooks/pre-commit`（gitleaks）が、Claude の `gh` 発行前は PreToolUse フックが走査する
 - 検出ルールは `.team-dev-kit/base.gitleaks.toml`（編集しない）。プロジェクト固有の allowlist は `.gitleaks.toml` に足す

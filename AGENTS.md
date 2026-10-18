@@ -8,7 +8,7 @@ team-dev-kit リポジトリ自身の開発契約。kit は自分のルールを
 - `kit/` — 配布物の真実（bootstrap が読むソースツリー）
   - `skills/` — 業務 skill（条件発火）。consumer の `.claude/skills/` へコピーされる
   - `scripts/egress-scan.sh` — PreToolUse egress フック本体（consumer の `.team-dev-kit/` へコピー）
-  - `framework/` — **B1: consumer に commit・編集禁止**。`contract.md`, `base.gitleaks.toml`, `pre-commit`。bootstrap 再実行（`--force`）が置換
+  - `framework/` — **B1: consumer に commit・編集禁止**。`contract.md`, `writing.md`, `base.gitleaks.toml`, `pre-commit`。bootstrap 再実行（`--force`）が置換
   - `config-starters/` — **B2: 1回だけ配置・以後 kit 触禁止**。`AGENTS.md`(@import), `gitleaks.toml`(extend), `github/*`
 - `docs/secret-scan.md` — スキャン設計（**配布対象外**。kit repo 内のみ）
 - `tests/` — `smoke.sh`（bootstrap の E2E）+ `fixtures/`
