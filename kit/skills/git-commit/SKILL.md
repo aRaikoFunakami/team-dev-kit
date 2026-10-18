@@ -57,10 +57,20 @@ fix(ui): keep dialog position after window resize
 feat(config): support environment-specific settings
 ```
 
+日本語（`lang: ja`）の良い例:
+
+```
+fix(auth): 20 文字を超えるパスワードでログインできるようにする
+feat(cache): OpenAPI スキーマをキャッシュしてオフラインでも起動する
+fix(ui): ウィンドウのリサイズ後もダイアログの位置を保つ
+```
+
 悪い例:
 
 ```
 fix(auth): fix login bug
+fix(auth): ログイン不具合の修正
+feat(cache): キャッシュ対応
 fix(auth): update authentication logic
 feat(api): change user endpoint
 perf(search): improve performance
