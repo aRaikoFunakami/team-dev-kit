@@ -150,7 +150,7 @@ escalate しなかった場合のみ、`plan.md` を Ready にする（escalate 
 
 ### Phase 5 — implement（実装）
 Ready 確定後、1ステップずつ実装するループ（1変更 → 直後に検証 → 次。プロジェクトの AGENTS.md に開発ループがあればそれに従う）を worktree 内で回す。
-`plan.md` の TODO を更新しながら進める。各ステップの検証が通るたびに `git-commit` の規約でコミットする（Phase 7 は未コミットだと中止するため、PR 前に全変更をコミット済みにする）。
+`plan.md` の TODO を更新しながら進める。各ステップの検証が通るたびに `git-commit` の規約でコミットする（未コミットの変更は PR に含まれないため、Phase 7 の前に `git status` で作業ツリーが clean なことを確認する）。
 
 ### Phase 6 — accept-gate（受け入れ検証）
 **PR に移る前に**、Phase 0 で固定した合格基準を1件ずつ照合する:
@@ -164,7 +164,7 @@ Ready 確定後、1ステップずつ実装するループ（1変更 → 直後�
 `/ticket-pr-publish` を**認可済み呼び出し**で呼ぶ。ユーザーが `/issue-to-pr #<n>` を起動した操作を、
 その Issue の PR 発行の認可として扱い、呼び出し時に「ユーザーが起動時にこの Issue の PR 発行を認可済み」と
 明示する。`ticket-pr-publish` は番号・base・タイトル・リポジトリを提示するだけで同意待ちをせず、そのまま発行する。
-発行先・base・本文の決定ルールは `ticket-pr-publish` のまま変えない。**同意では停止しない。** ただし発行そのものが失敗したとき（gh 未認証・push 拒否・issue 番号を抽出できない等）は、黙って Phase 8 へ進まず、`phase: pr` のまま停止して原因をユーザーへ報告する。
+発行先・base・本文の決定ルールは `ticket-pr-publish` のまま変えない。発行に成功したら `phase: review` に更新する。**同意では停止しない。** ただし発行そのものが失敗したとき（gh 未認証・push 拒否・issue 番号を抽出できない等）は、黙って Phase 8 へ進まず、`phase: pr` のまま停止して原因をユーザーへ報告する。
 
 ### Phase 8 — review（パイプライン終端）
 `review-loop` skill に従って自己レビューする（`/code-review` → 証拠で真偽判定 → 真の不具合を全て修正 → 再レビュー）。
