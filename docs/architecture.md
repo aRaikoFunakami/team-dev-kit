@@ -95,7 +95,7 @@ graph TB
     subgraph KIT["team-dev-kit リポジトリ (upstream)"]
         BSH["bootstrap.sh（唯一の導線）"]
         subgraph SRC["kit/ (配布物の真実)"]
-            SK["skills/<br/>業務skill: git-commit, github-workflow,<br/>doc-writing, ticket-*"]
+            SK["skills/<br/>業務skill: git-commit, github-workflow,<br/>review-loop, doc-writing, ticket-*"]
             SC["scripts/egress-scan.sh（L3 ゲート本体）"]
             FW["framework/ (原本・共通)<br/>contract.md / base.gitleaks.toml / pre-commit"]
             CS["config-starters/ (原本・雛形)<br/>AGENTS.md / gitleaks.toml / github/*"]
@@ -255,7 +255,7 @@ flowchart LR
 | `tests/smoke.sh` | Shell | bootstrap の全ライフサイクル E2E |
 | 設定/テンプレ | TOML / JSON / Markdown / YAML | `.gitleaks.toml`, `settings.json`, 各テンプレ |
 
-**外部依存**: `gitleaks`（秘密/個人情報スキャン）, `git`, `python3`, `gh`（Issue/PR 発行）
+**外部依存**: `gitleaks`（秘密/個人情報スキャン）, `git`, `python3`, `gh`（Issue/PR 発行）。Claude Code の機能として `/code-review`（`review-loop` skill が前提とする。kit は導入しない。無い環境では skill が報告して止まる）
 
 ## 10. 主要ロジックのファイル参照
 

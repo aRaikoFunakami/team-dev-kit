@@ -379,6 +379,7 @@ Skill / Hook として実装しています。以下はその要約です。**�
 | PR | **変更の性質によらず常に必須**（記録として残す） | [`github-workflow` skill](kit/skills/github-workflow/SKILL.md) |
 | Issue の要否 | 線引きは「**挙動を変えるか**」。挙動を変える変更は Issue 必須（`Closes #N` で紐付け）。挙動不変かつ些細（typo・文言微修正・コメント・整形）は Issue 不要 | [`github-workflow` skill](kit/skills/github-workflow/SKILL.md) |
 | コミット規約 | `type(scope): subject` 形式 | [`git-commit` skill](kit/skills/git-commit/SKILL.md) |
+| レビュー | 必ず `/code-review` で行い、指摘は想像ではなく証拠（再現・コード・ログ・設計の定石・一次情報）だけで真偽を判定し、真の不具合は全て修正して再レビューする（周回上限あり） | [`review-loop` skill](kit/skills/review-loop/SKILL.md) |
 | 設計ドキュメント | 文体・構造のルールを自動適用 | [`doc-writing` skill](kit/skills/doc-writing/SKILL.md) |
 | 秘密情報ガード | commit 前・発行前に gitleaks で機械検査し、危険ならブロック（二重ガード） | pre-commit hook（`.githooks/pre-commit`）＋ PreToolUse egress hook（[`egress-scan.sh`](kit/scripts/egress-scan.sh)） |
 

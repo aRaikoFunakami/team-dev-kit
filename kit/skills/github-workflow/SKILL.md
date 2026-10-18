@@ -1,6 +1,6 @@
 ---
 name: github-workflow
-description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成・レビュー、ブランチ運用）に起動する。gh コマンド必須、Issue の要否は「挙動を変えるか」で判断、branch + PR は常に必須（default ブランチ＝main への直接 push 禁止）、PR 本文に Closes #N で Issue を紐付ける、closing keyword は default ブランチでのみ発火、PR 作成後は /code-review で自己レビュー、といった本リポジトリの GitHub 運用契約を与える。「Issue 作って」「PR 出して」「ブランチ切って」等で発火。
+description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成・レビュー、ブランチ運用）に起動する。gh コマンド必須、Issue の要否は「挙動を変えるか」で判断、branch + PR は常に必須（default ブランチ＝main への直接 push 禁止）、PR 本文に Closes #N で Issue を紐付ける、closing keyword は default ブランチでのみ発火、PR 作成後は review-loop skill に従って /code-review で自己レビュー、といった本リポジトリの GitHub 運用契約を与える。「Issue 作って」「PR 出して」「ブランチ切って」等で発火。
 ---
 
 <!--
@@ -275,16 +275,15 @@ gh pr create \
      --body "Closes #101 #102 #103"
    ```
 
-4. 最終 PR でも `/code-review` で自己レビューする（N=1 と同じ）。
+4. 最終 PR でも `review-loop` skill に従って自己レビューする（N=1 と同じ）。
 5. マージ後、アンブレラと配下 Task のブランチ・worktree を削除する。
 
 ### PR 作成後の自己レビュー（必須）
 
-PR を作成したら、続けて **その PR の差分を自分でレビューする**。
-`/code-review` を実行し、現ブランチ差分をバグ・簡素化観点で点検する。
+PR を作成したら、続けて **その PR の差分を自分でレビューする**。手順は `review-loop` skill に従う。
 
-- findings は **ユーザーへ報告する**。自動修正・PR への自動コメント投稿はしない（修正可否は人が判断する）。
-- findings が無ければ「self-review: 指摘なし」と明示する。
+- `/code-review` で点検し、各指摘を証拠だけで「真/偽/判断不能」に判定し、真の不具合は全て修正して PR に入れ、再度 `/code-review` する（真の不具合が 0 件になるまで。周回上限あり）。
+- 指摘が無ければ「review-loop: 指摘なし」と明示する。
 - 自己レビューは PR 作成フローの一部。省略しない。
 
 ### squash merge 時の PR マージ
