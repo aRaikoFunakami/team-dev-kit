@@ -22,7 +22,8 @@
    - bug → `.github/ISSUE_TEMPLATE/bug.md`
    - docs → `.github/ISSUE_TEMPLATE/docs.md`
    - feature → `.github/ISSUE_TEMPLATE/feature.md`
-3. **本文を埋める** — `title:` に接頭辞なしの一文（バグは「条件＋症状」、機能は「できるようになること」）を書き、
+3. **本文を埋める** — 当時は `title:` の `scope` プレースホルダを実際の scope に置き換えていた
+   （現役は接頭辞なしの一文。→ `github-workflow` skill「Issue と PR のタイトル」）。
    受け入れ条件・対象ファイル等を記述する。**実装者が追加質問なしで着手できる粒度**にする。
 4. **ラベルを確認する** — テンプレ由来の `bug` / `documentation` / `feature` が
    リポジトリに存在するか `gh label list` で確認。無ければ作る。
