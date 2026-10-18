@@ -162,6 +162,7 @@ chk "RL: 3周目の修正も再レビュー"       "grep -q '3 周目の修正�
 chk "RL: 同じ指摘の判定基準"           "grep -q 'ファイルと問題の要旨' '$RL'"
 chk "RL: 判定と outcome の対応"        "grep -q '偽 → \`no_change_needed\`' '$RL'"
 chk "RL: 判断不能の前に真を先に修正"    "grep -q '先に真の不具合を修正して反映してから' '$RL'"
+chk "RL: 範囲外の指摘は対象外で skipped" "grep -q '記録に「対象外」と書く' '$RL'"
 chk "RL: プロジェクト固有は AGENTS.md" "grep -q 'AGENTS.md' '$RL'"
 chk "GW: review-loop を参照"           "grep -q 'review-loop' '$GW'"
 chk "GW: 旧『自動修正しない』を撤去"   "! grep -q '自動修正・PR への自動コメント投稿はしない' '$GW'"
