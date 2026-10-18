@@ -173,6 +173,7 @@ chk "RL: 子に意図的な決定の一覧を渡す"  "grep -q '意図的な決�
 chk "RL: 子に渡さないもの"             "grep -q '子に渡さないもの' '$RL'"
 chk "RL: 同じセッションで良い場合"     "grep -q '同じセッションで実行してよい' '$RL'"
 chk "RL: 引数はレベルと対象だけ"         "grep -q '渡す引数はレベルと対象' '$RL' && ! grep -q '渡す引数はレベルだけ' '$RL'"
+chk "RL: 停止報告にレビューの実行場所"   "grep -q 'レビューを実行した場所（子エージェントか、同じセッションか）' '$RL'"
 chk "RL: プロジェクト固有は AGENTS.md" "grep -q 'AGENTS.md' '$RL'"
 chk "GW: review-loop を参照"           "grep -q 'review-loop' '$GW'"
 chk "GW: 旧『自動修正しない』を撤去"   "! grep -q '自動修正・PR への自動コメント投稿はしない' '$GW'"
