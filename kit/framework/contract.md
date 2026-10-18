@@ -19,6 +19,7 @@
 | **git-commit** | コミットメッセージを作成・生成するとき（条件発火） |
 | **github-workflow** | GitHub を操作するとき（条件発火） |
 | **review-loop** | PR レビュー・コードレビュー・レビュー指摘への対応（条件発火） |
+| **issue-to-pr** | Issue を起点に、調査・計画・実装・PR・レビューまで通すとき（`/issue-to-pr #n` の明示起動のみ） |
 | **doc-writing** | 設計ドキュメント・技術文書を作成・更新するとき（条件発火） |
 | **ticket-template / draft / publish / pr-publish** | チケット下書きの作成・発行・PR 化（条件発火） |
 
