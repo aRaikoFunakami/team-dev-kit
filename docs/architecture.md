@@ -55,7 +55,7 @@ B層の中身は「全員で共有して触らないもの（framework）」と�
 | 編集 | 禁止（契約違反） | 期待・推奨 |
 | 更新 | bootstrap 再実行（`--force`）が**置換** | bootstrap は再配置しない（既存があれば glue のみ注入） |
 | 還元 | 本体リポジトリへ Issue / PR | 還元しない（プロジェクト固有） |
-| 例 | `contract.md`, `base.gitleaks.toml`, `pre-commit` | `AGENTS.md`, `.gitleaks.toml`, `.github/*` |
+| 例 | `contract.md`, `writing.md`, `base.gitleaks.toml`, `pre-commit` | `AGENTS.md`, `.gitleaks.toml`, `.github/*` |
 
 framework と config を裏でつなぐ仕組み（**glue＝のりづけ役**）は、読む相手によって 2 通り使い分ける:
 
@@ -97,7 +97,7 @@ graph TB
         subgraph SRC["kit/ (配布物の真実)"]
             SK["skills/<br/>業務skill: git-commit, github-workflow,<br/>review-loop, doc-writing, ticket-*"]
             SC["scripts/egress-scan.sh（L3 ゲート本体）"]
-            FW["framework/ (原本・共通)<br/>contract.md / base.gitleaks.toml / pre-commit"]
+            FW["framework/ (原本・共通)<br/>contract.md / writing.md / base.gitleaks.toml / pre-commit"]
             CS["config-starters/ (原本・雛形)<br/>AGENTS.md / gitleaks.toml / github/*"]
         end
     end
@@ -109,7 +109,7 @@ graph TB
             CEG[".team-dev-kit/egress-scan.sh"]
         end
         subgraph PBfw["B層 — framework (編集禁止)"]
-            CFW[".team-dev-kit/contract.md<br/>.team-dev-kit/base.gitleaks.toml<br/>.githooks/pre-commit"]
+            CFW[".team-dev-kit/contract.md<br/>.team-dev-kit/writing.md<br/>.team-dev-kit/base.gitleaks.toml<br/>.githooks/pre-commit"]
         end
         subgraph PBcfg["B層 — config (プロジェクト所有)"]
             CCFG["AGENTS.md  @import→ contract.md<br/>.gitleaks.toml [extend]→ base<br/>.github/ISSUE_TEMPLATE/*, PR template"]
@@ -156,6 +156,7 @@ bootstrap が読み取り、consumer へコピーする原本ツリー。
 | `.claude/settings.json`（PreToolUse） | A | bootstrap が生成/マージ | 冪等マージ |
 | `.team-dev-kit/egress-scan.sh` | A | `scripts/egress-scan.sh` | 再実行で置換 |
 | `.team-dev-kit/contract.md` | B/framework | `framework/contract.md` | `--force` 置換 |
+| `.team-dev-kit/writing.md` | B/framework | `framework/writing.md` | `--force` 置換 |
 | `.team-dev-kit/base.gitleaks.toml` | B/framework | `framework/base.gitleaks.toml` | `--force` 置換 |
 | `.githooks/pre-commit` | B/framework | `framework/pre-commit`（+x） | `--force` 置換 |
 | `AGENTS.md` | B/config | `config-starters/AGENTS.md` | install-once（既存は glue 注入のみ） |

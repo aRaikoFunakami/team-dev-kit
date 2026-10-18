@@ -1,12 +1,14 @@
 ---
 name: ドキュメント (Docs)
 about: ドキュメントの追加・修正。
-title: "docs(scope): "
+title: ""
 labels: documentation
 assignees: ''
 ---
 
 <!--
+タイトル: 接頭辞なしの一文で「どの文書に何を足す / 直す」を書く。
+  例: README の起動手順に Colima 利用時のポート転送の注意を足す
 概要: ドキュメント Issue の Markdown テンプレート（spec-first）。
 上から「目的 → 変更内容 → 対象ファイル → 受け入れ条件」だけで着手できる粒度にする。
 背景は後方。各見出しコメントの長さ上限を守る。不要な節は削除してよい。

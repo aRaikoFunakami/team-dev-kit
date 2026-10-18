@@ -22,7 +22,8 @@
    - bug → `.github/ISSUE_TEMPLATE/bug.md`
    - docs → `.github/ISSUE_TEMPLATE/docs.md`
    - feature → `.github/ISSUE_TEMPLATE/feature.md`
-3. **本文を埋める** — `title:` の `scope` プレースホルダを実際の scope に置き換え、
+3. **本文を埋める** — 当時は `title:` の `scope` プレースホルダを実際の scope に置き換えていた
+   （現役は接頭辞なしの一文。→ `github-workflow` skill「Issue と PR のタイトル」）。
    受け入れ条件・対象ファイル等を記述する。**実装者が追加質問なしで着手できる粒度**にする。
 4. **ラベルを確認する** — テンプレ由来の `bug` / `documentation` / `feature` が
    リポジトリに存在するか `gh label list` で確認。無ければ作る。
@@ -58,5 +59,5 @@ title / label を拾う運用だった。種別の使い分け:
 ## 発行は取り消しが難しい操作
 
 人間運用でも、起票は外部公開・取り消し困難な操作だった。発行前に
-title にプレースホルダが残っていないか、必須節が空でないかを必ず確認してから
+title が空でないか、必須節が空でないかを必ず確認してから
 `gh issue create` を叩く。現役では `ticket-publish` が明示同意ゲートでこれを担保する。
