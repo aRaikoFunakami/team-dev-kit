@@ -141,6 +141,8 @@ AGENTS.md           ← プロジェクト固有ルールを書く場所（編�
 
 これを commit すると、以後この repo を clone した人は **パターンA だけ**で済みます。
 
+> 🌐 **英語運用のプロジェクト**（`AGENTS.md` に `lang: en` を書く場合）は、bootstrap は `lang` を読まないので、導入時に [`kit/config-starters/github.en/ISSUE_TEMPLATE/`](kit/config-starters/github.en/ISSUE_TEMPLATE/) の 3 本（`bug.md`・`docs.md`・`feature.md`）を `.github/ISSUE_TEMPLATE/` に置いてください（日本語版の同名ファイルを上書きします）。
+
 > 🔁 **すでに独自の `AGENTS.md` や `.gitleaks.toml` がある場合**: あなたの記述は**そのまま保持**します。
 > その上で、共通契約を読み込む `@.team-dev-kit/contract.md`（AGENTS.md）と、基盤検出ルールを継承する
 > `[extend]`（.gitleaks.toml）の**繋ぎ込みだけを自動で追記**します。これにより既存設定を壊さず、
@@ -413,6 +415,8 @@ hotfix も特別扱いではなく、**上の「挙動を変えるか」で 2 �
 
 更新はブートストラップの再実行です（framework と skill を最新版で上書き。`AGENTS.md` 等の config は既存を残します）。
 `.github/` の Issue / PR テンプレも config なので残ります。kit 側でテンプレが変わったときは、[`kit/config-starters/github/`](kit/config-starters/github/) から手で差し替えてください。
+
+既存のプロジェクトが `lang: en` に切り替えるときも、`.github/ISSUE_TEMPLATE/` の 3 本を [`kit/config-starters/github.en/ISSUE_TEMPLATE/`](kit/config-starters/github.en/ISSUE_TEMPLATE/) のもので手で差し替えてください。
 
 ```bash
 cd <リポジトリ>

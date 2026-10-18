@@ -217,6 +217,13 @@ chk "GC: subject は lang の言語"        "grep -q '契約の \`lang\` の言�
 chk "PP: subject は lang の言語"        "grep -q 'subject は契約の \`lang\` の言語で書く' '$PP' && grep -q 'writing.md' '$PP'"
 chk "DW: writing.md を参照"             "grep -q 'writing.md' '$DW'"
 
+echo "== 12. Issue #37 英語版 Issue テンプレ =="
+EN="$ROOT/kit/config-starters/github.en/ISSUE_TEMPLATE"
+for t in bug docs feature; do
+  chk "EN: $t.md が存在し title は空"   "[ -f '$EN/$t.md' ] && grep -q '^title: \"\"$' '$EN/$t.md'"
+  chk "EN: $t.md の ## 見出し数が日本語版と一致" "[ \"\$(grep -c '^## ' '$EN/$t.md')\" = \"\$(grep -c '^## ' '$TPL/$t.md')\" ]"
+done
+
 echo ""
 echo "== 結果: pass=$pass fail=$fail =="
 [ "$fail" -eq 0 ]
