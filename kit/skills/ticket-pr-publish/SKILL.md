@@ -1,6 +1,6 @@
 ---
 name: ticket-pr-publish
-description: 現在の feature ブランチから issue 番号を拾い Closes # 付きの PR を gh で作成する（GitHub への登録・取り消し困難）。明示的に /ticket-pr-publish が呼ばれたときのみ起動し、自然言語の依頼では自動起動しない
+description: 現在の feature ブランチから issue 番号を拾い Closes # 付きの PR を gh で作成する（GitHub への登録・取り消し困難）。明示的に /ticket-pr-publish が呼ばれたとき（issue-to-pr 等のオーケストレータからの呼び出しを含む）のみ起動し、自然言語の依頼では自動起動しない
 argument-hint: "[#<issue-number> など番号上書き（任意）]"
 ---
 
