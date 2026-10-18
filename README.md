@@ -288,7 +288,7 @@ team-dev-kit のいちばん大事なところは、**ルールを指示しな�
 | Issue 作成 | feature テンプレートに沿って作成 | [#5](https://github.com/aRaikoFunakami/sandbox-team-dev-kit/issues/5) |
 | ブランチ | `feature/5-rust-hello-world` を作成（`main` 直接コミットなし） | — |
 | 実装 | `Cargo.toml` / `src/main.rs` / `.gitignore` を生成し `cargo run` で検証 | — |
-| コミット | `feat(hello-rs): Rust で "Hello, World!" を標準出力するサンプルを追加` | — |
+| コミット | `feat(hello-rs): Rust で "Hello, World!" を標準出力するサンプルを追加する` | — |
 | PR 発行 | 本文に `Closes #5` を入れ、Issue と双方向リンク | [#6](https://github.com/aRaikoFunakami/sandbox-team-dev-kit/pull/6) |
 | マージ | squash マージ → Issue #5 が**自動クローズ**、ブランチも自動削除 | — |
 
@@ -306,7 +306,7 @@ team-dev-kit のいちばん大事なところは、**ルールを指示しな�
 | Issue 作成 | feature テンプレートに沿って作成 | [#7](https://github.com/aRaikoFunakami/sandbox-team-dev-kit/issues/7) |
 | ブランチ | `feature/7-hello-team-dev-kit` を作成 | — |
 | 修正 | `src/main.rs` を編集し `cargo run` → `Hello, Team-dev-kit!` を確認 | — |
-| コミット | `feat(hello-rs): 出力文言を "Hello, Team-dev-kit!" に変更` | — |
+| コミット | `feat(hello-rs): 出力文言を "Hello, Team-dev-kit!" に変える` | — |
 | PR 発行 | 本文に `Closes #7` | [#8](https://github.com/aRaikoFunakami/sandbox-team-dev-kit/pull/8) |
 | マージ | squash マージ → Issue #7 が**自動クローズ**、ブランチも自動削除 | — |
 
@@ -378,7 +378,10 @@ Skill / Hook として実装しています。以下はその要約です。**�
 | ブランチ運用 | default ブランチ（`main` / `master`）で直接作業・直接 push しない。必ず feature ブランチを切り、PR 経由でマージ | [`github-workflow` skill](kit/skills/github-workflow/SKILL.md) |
 | PR | **変更の性質によらず常に必須**（記録として残す） | [`github-workflow` skill](kit/skills/github-workflow/SKILL.md) |
 | Issue の要否 | 線引きは「**挙動を変えるか**」。挙動を変える変更は Issue 必須（`Closes #N` で紐付け）。挙動不変かつ些細（typo・文言微修正・コメント・整形）は Issue 不要 | [`github-workflow` skill](kit/skills/github-workflow/SKILL.md) |
-| コミット規約 | `type(scope): subject` 形式 | [`git-commit` skill](kit/skills/git-commit/SKILL.md) |
+| コミット規約 | `type(scope): subject` 形式。subject は `lang` の言語 | [`git-commit` skill](kit/skills/git-commit/SKILL.md) |
+| Issue タイトル | 接頭辞なしの一文。種別はラベル（bug / feature / documentation）で表す | [`github-workflow` skill](kit/skills/github-workflow/SKILL.md) |
+| 言語 | 既定は `lang: ja`。`AGENTS.md` に `lang: en` の 1 行を書けば英語に切り替わる。ブランチ名・ラベル名・type(scope) は常に英語 | [`contract.md`](kit/framework/contract.md) |
+| 文章 | Issue・PR 本文・設計文書は、読み手を初心者の技術者と想定し、略語は正式名称、一文一内容、根拠のない評価語を使わない | [`writing.md`](kit/framework/writing.md) |
 | レビュー | 必ず `/code-review` で行い、指摘は想像ではなく証拠（再現・コード・ログ・設計の定石・一次情報）だけで真偽を判定し、真の不具合は全て修正して再レビューする（周回上限あり） | [`review-loop` skill](kit/skills/review-loop/SKILL.md) |
 | 設計ドキュメント | 文体・構造のルールを自動適用 | [`doc-writing` skill](kit/skills/doc-writing/SKILL.md) |
 | 秘密情報ガード | commit 前・発行前に gitleaks で機械検査し、危険ならブロック（二重ガード） | pre-commit hook（`.githooks/pre-commit`）＋ PreToolUse egress hook（[`egress-scan.sh`](kit/scripts/egress-scan.sh)） |
@@ -409,6 +412,7 @@ hotfix も特別扱いではなく、**上の「挙動を変えるか」で 2 �
 | 共通ルールへの改善を提案 | `.team-dev-kit/` 配下を編集せず、本体リポジトリへ Issue / PR |
 
 更新はブートストラップの再実行です（framework と skill を最新版で上書き。`AGENTS.md` 等の config は既存を残します）。
+`.github/` の Issue / PR テンプレも config なので残ります。kit 側でテンプレが変わったときは、[`kit/config-starters/github/`](kit/config-starters/github/) から手で差し替えてください。
 
 ```bash
 cd <リポジトリ>
