@@ -32,7 +32,7 @@ T=$(newrepo)
 run_bs "$T" >/dev/null
 hp=$(git -C "$T" config --local core.hooksPath || true)
 chk "skill: git-commit"            "[ -f '$T/.claude/skills/git-commit/SKILL.md' ]"
-chk "skill: 8個(業務のみ)"          "[ \$(ls '$T/.claude/skills' | wc -l) -eq 8 ]"
+chk "skill: 9個(業務のみ)"          "[ \$(ls '$T/.claude/skills' | wc -l) -eq 9 ]"
 chk "kit-* skill は配られない"      "[ -z \"\$(ls '$T/.claude/skills' | grep '^kit-' || true)\" ]"
 chk "egress: .team-dev-kit/egress-scan.sh(+x)" "[ -x '$T/.team-dev-kit/egress-scan.sh' ]"
 chk "settings.json に PreToolUse"  "grep -q 'egress-scan.sh' '$T/.claude/settings.json'"
@@ -145,6 +145,14 @@ chk "TD: feature グルーピング"        "grep -q 'グルーピング' '$TD'"
 chk "PP: Task ブランチ判定"           "grep -q 'Task ブランチ' '$PP'"
 chk "PP: Task PR は Refs #<n>"        "grep -q 'Refs #<n>' '$PP'"
 chk "PP: 認可済み呼び出しは同意待ちしない" "grep -q '認可済み呼び出し' '$PP' && grep -q '従来どおり同意を取る' '$PP'"
+IP="$ROOT/kit/skills/issue-to-pr/SKILL.md"
+chk "IP: skill が存在"                 "[ -f '$IP' ]"
+chk "IP: PR は認可済み呼び出し"        "grep -q '認可済み呼び出し' '$IP' && ! grep -q '2番目の停止点' '$IP'"
+chk "IP: レビュー前後で確認しない"     "grep -q 'レビューの前後でユーザーに確認しない' '$IP'"
+chk "IP: 最終報告"                     "grep -q '最終報告' '$IP'"
+chk "IP: 計画レビューは1回"            "grep -q '計画レビュー: 済' '$IP'"
+chk "IP: repo 固有の §参照が無い"      "! grep -q 'AGENTS.md §' '$IP'"
+chk "contract: issue-to-pr を列挙"     "grep -q 'issue-to-pr' '$ROOT/kit/framework/contract.md'"
 # Issue テンプレ 3 種に検証単位節（github-workflow が bugfix/hotfix も束ね可と明記する整合）
 chk "FT: feature 検証単位節"          "grep -q '## 検証単位 (feature)' '$TPL/feature.md'"
 chk "FT: bug 検証単位節"              "grep -q '## 検証単位 (feature)' '$TPL/bug.md'"
