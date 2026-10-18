@@ -41,7 +41,7 @@ description: GitHub を操作するとき（Issue の起票・閲覧、PR 作成
 
 - Issue の種別は接頭辞ではなくラベル（`bug` / `feature` / `documentation`）で表す。テンプレが自動で付ける
 - 変更対象（関数 / API / 画面 / モジュール名）をタイトルの文中で名指しする。抽象語・曖昧語を使わない
-- 一覧で切れない長さにする（日本語は 40 字、英語は 70 字が目安）
+- Issue は一覧で切れない長さにする（日本語は 40 字、英語は 70 字が目安）。commit / PR の長さは git-commit skill に従う
 - Issue・PR の本文の文章は `.team-dev-kit/writing.md` に従う
 
 ### Issue の要否（挙動を変えるか）
