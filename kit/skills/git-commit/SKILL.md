@@ -41,7 +41,8 @@ feat | fix | refactor | perf | test | docs | chore | ci | build | revert
 必須:
 
 - 1行で書く
-- 72文字以内を推奨
+- 契約の `lang` の言語で書く。英語なら命令形（add / fix / make …）、日本語なら「〜する」「〜しない」の終止形で統一する（体言止めは使わない）
+- 長さの目安は英語 72 文字、日本語 40 字
 - コミット後に成立する仕様・振る舞いを書く
 - ChangeLog にそのまま掲載できる内容にする
 
@@ -56,10 +57,20 @@ fix(ui): keep dialog position after window resize
 feat(config): support environment-specific settings
 ```
 
+日本語（`lang: ja`）の良い例:
+
+```
+fix(auth): 20 文字を超えるパスワードでログインできるようにする
+feat(cache): OpenAPI スキーマをキャッシュしてオフラインでも起動する
+fix(ui): ウィンドウのリサイズ後もダイアログの位置を保つ
+```
+
 悪い例:
 
 ```
 fix(auth): fix login bug
+fix(auth): ログイン不具合の修正
+feat(cache): キャッシュ対応
 fix(auth): update authentication logic
 feat(api): change user endpoint
 perf(search): improve performance

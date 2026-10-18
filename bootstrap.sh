@@ -243,6 +243,7 @@ if [ "$PROJECT_IS_GIT" -eq 1 ]; then
   say ""
   say "3) guardrails -> $TARGET (framework + config)"
   copy_file "$KIT/framework/contract.md"        "$TARGET/.team-dev-kit/contract.md"
+  copy_file "$KIT/framework/writing.md"         "$TARGET/.team-dev-kit/writing.md"
   copy_file "$KIT/framework/base.gitleaks.toml" "$TARGET/.team-dev-kit/base.gitleaks.toml"
   copy_file "$KIT/framework/pre-commit"         "$TARGET/.githooks/pre-commit" x
   ensure_glue agents   "$KIT/config-starters/AGENTS.md"     "$TARGET/AGENTS.md"

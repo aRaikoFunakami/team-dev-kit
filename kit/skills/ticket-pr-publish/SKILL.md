@@ -38,6 +38,7 @@ argument-hint: "[#<issue-number> など番号上書き（任意）]"
    - push 対象の差分が無い（コミットしていない）場合は中止し、先にコミットするよう促す。
 
 4. **PR 本文の生成**
+   - 本文の文章は `.team-dev-kit/writing.md` に従う（言語は契約の `lang`）。
    - `.github/PULL_REQUEST_TEMPLATE.md` があればその節構造に沿う。無ければ Related Issue / 変更概要 / テスト / チェックの節で組む。
    - 通常の PR（base=default）では、本文の先頭付近に **必ず** `Closes #<n>` を入れる（`Fixes` / `Resolves` でも可）。これが Issue⇄PR 双方向リンクの生成条件。
    - **Task PR（base がアンブレラ＝非 default）のときは `Closes` を使わず `Refs #<n>` を入れる。** closing keyword は default 着地でのみ発火するため、Task PR で `Closes` を書くと誤発火・統合 E2E ゲート前の早期 close を招く。Issue の close は最終 PR（アンブレラ → default）が `Closes #..` を集約して行う（→ github-workflow skill）。
@@ -45,7 +46,7 @@ argument-hint: "[#<issue-number> など番号上書き（任意）]"
    - 本文は `/tmp/ticket-pr-publish-body-<branch>.txt` に書き出す。
 
 5. **PR タイトルの決定**
-   - `type(scope): subject` 形式（→ git-commit skill）に揃える。代表コミットの subject を流用してよい。
+   - `type(scope): subject` 形式（→ git-commit skill）に揃える。subject は契約の `lang` の言語で書く。代表コミットの subject を流用してよい。
 
 6. **発行前チェック（必須・ここは通常文で確認）**
    - 抽出した issue 番号・base ブランチ・タイトル・発行先リポジトリをユーザーに提示する。
